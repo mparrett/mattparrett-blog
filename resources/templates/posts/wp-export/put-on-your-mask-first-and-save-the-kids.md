@@ -1,0 +1,17 @@
+My fifth grade class took a field trip to Madera Canyon.
+We collected Manzanita branches which we later made into pencils and donated. I was entrusted with drilling holes for the lead. We slid on a natural water slide in a rocky outcrop. We ran and played and had fun doing stuff children do. The ice cold water was exhilarating and the slippery rocks felt dangerous.
+Ms. Rubio arranged a sort of picnic buffet at our campsite. She was a kind and lovely lady. Waiting in line, it was finally my turn. I hungrily slathered a huge helping of beans onto my plate and quickly moved along. Immediately I was scolded for my inappropriate quantity of beans. There are a lot of mouths to feed, how dare you! The scorn on her face was forever burned into my mind. The memory of that experience always stuck with me.
+
+When I look back, it seems like my younger self was subconsciously seeking (and finding) support for the beliefs "I am a selfish person. Being selfish is bad. I am bad." As a result, I grew up feeling pretty self-absorbed. I knew I wasn't focused much on others and felt guilty about it. Sometimes I did nice things for others. Those times temporarily made me feel like a decent person and gave me a reason to deny how selfish I was. I was just a kid, but these patterns stuck with me well into adult life.
+
+Now, married life and fatherhood continues to transform me daily. When Micah was born, I couldn't imagine putting my needs before his. He was completely helpless and totally dependent. I lost so much sleep, didn't eat, and stopped doing the things I loved. I forgot how to take care of myself. I got sick. I think my reaction was appropriate in some ways, for a time. When the situation became less critical, this pattern stuck with me.
+
+In our culture, the general belief says selfishness is bad and selflessness is virtuous. We say and think things like "Don't be so selfish!" and "Don't you think about anyone but yourself?" Statements like these support the underlying beliefs every time they're used. As a result of these beliefs, many of us have become everyday martyrs.
+
+Having the capacity to put others first may be virtuous but is different than the habitual act. Anything done without limit is not sustainable and eventually becomes destructive. Jesus already died for the sins of mankind and there's no need to repeat the ultimate sacrifice, no matter how inspiring it is. What matters for us now is, when the going gets tough, are we able to serve? Can we put down what seems important for someone else's benefit, with no reward to ourselves?
+
+This overused example makes the matter very clear. When we board that Southwest Airlines flight to Los Angeles on our way to Disney Land, we're told what to do if we lose cabin pressure. We put our masks on first so we can stay conscious, so we can put masks on our children. When we prioritize taking care of ourselves, we can give our best to those we care about. This doesn't permit us to slide into a self-absorbed, self-justifying, self-pleasing lifestyle with no recognition of others. This is about always keeping others in mind and doing what it takes so you can best serve them for as long as possible.
+
+Here's the video that inspired this post. If you're a parent like me, definitely give it a watch.
+
+<iframe src="http://www.youtube.com/embed/FQK9Ufr4yrY" height="315" width="560" allowfullscreen="" frameborder="0"></iframe>

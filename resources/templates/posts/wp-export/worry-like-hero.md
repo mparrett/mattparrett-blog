@@ -1,0 +1,55 @@
+<img src="/assets/mp-blog/wp-export/ice-dragon-slayers.jpg" class="img-responsive" />
+
+Learn to slay your scary self-imposed limitations.
+
+“If I had more time or money... “
+
+“I’d like to, but...”
+
+Sound familiar?
+
+Last week my 18 month old son and I played “Dragon Slayers” in our dusty backyard. Daddy had to let go of his need to be serious, but otherwise it was effortless. Micah wielded a stick and I followed swinging a rake. Once we discovered the Dragon’s Lair by the Great Citrus Tree, we slayed the beast. Like true champions of the land.
+
+Does imagination have a place in your serious, responsible adult life? You bet your broadsword it does!
+
+Slaying dragons is a lot of fun and I want to show you how I do it. But first we have to understand our adversary.
+
+We’re good and serious adults and we think realistically. But even when our thoughts are positive, we get blocked and our options seem very limited. Unknowingly we create dragons that guard unlimited creative possibilities from unfolding in our lives. We then empower them and continue fighting a futile battle, winning only frustration and confusion. We’re limited by our thinking, but we are more than our thoughts.
+
+It apparently takes effort to engage the untrained adult imagination. This is because reinforced conditions exist in our subconscious mind. Through years of serious responsible living, we bolster these limiting ideas. Our default patterns are “If Only” and “But”. We forget how valuable daydreaming is. Can we re-learn to imagine like children?
+
+For some of us, this seems impossible.
+
+But there is hope! We have a secret weapon. Armed with it, we can unlearn our limitations and become heroes.
+
+### How to worry like a hero: ###
+
+We all worry. As adults, our imaginations mainly explore negative scenarios, effortlessly. Think about it. When was the last time it took effort to worry about something? True, it’s draining. But you don’t have to force it. Our minds require no special training to explore “What If” scenarios. And the hardware works just as well with positive scenarios as negative ones. That’s our secret.
+
+Now we’re going to start exploring scenarios that expand our possibilities. Because we’re dragon-slayers. We just need a little help from our secret weapon.
+
+Allow me to formally introduce you. I call it “What If”. The name is a little underwhelming, I know. But the technique is powerful. “What If” allows us to worry like heroes.
+
+#### Here’s how to get started. ####
+
+First, find a quiet place where you can perform a strange ritual. (We wouldn’t want anyone to catch you being childish!) Leave your phone in another room and tell your spouse you’re off the grid for 20 minutes?—?this time is sacred. Do whatever helps you focus and concentrate. Turn the lights down, light a candle, play relaxing music, burn incense, assume a lotus posture. Or none of those.
+
+Now let a “What if” scenario fill your mind. Really see it, vividly.
+
+- “What if I got that promotion?”
+- “What if I went on vacation?”
+- “What if I was completely happy and fulfilled?”
+
+Pretend this “What if” is 100% true, right now. Don’t worry, this is a safe mental experiment. What would your life look and feel like? How would you relate differently to others? Let your mind wander wherever it wants to go. I like to take notes, but you don’t have to. Find what works for you.
+
+You might notice this is difficult at first. Limiting thoughts might bubble up. This is perfectly normal. Just notice them and let your mind drift back into fantasy. With time those patterns will start to lose their strength and dissolve.
+
+Your new-found ability is powerful, fun, and liberating. But you need to practice. You imagined effortlessly as a child. So this means you really have nothing to learn. You must only un-learn the cultural and personal limitations that guard your deepest treasures. Worry like a hero.
+
+Now go slay some dragons!
+
+------
+
+This post originally appeared on Medium.
+
+https://medium.com/better-humans/b1a0fee04873

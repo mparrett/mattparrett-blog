@@ -1,0 +1,7 @@
+vendor/
+composer.lock
+.idea
+*.swap
+resources/templates/sys
+web/index-default.php
+src/MP/Framework
