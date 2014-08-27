@@ -5,21 +5,21 @@
 		</p>
 		<p>
 			<strong>Hello there!</strong><br/>
-			Welcome to my blog. I'm a happily married dad, technology enthusiast, BJJ practitioner, and I have a bunch of interests.
+			Welcome to my blog. I'm a happily married dad, technology enthusiast, BJJ practitioner with a bunch of interests.
 		</p>
 	</div>
 	<div class="sidebar-module">
 		<h4>Archives</h4>
 		<ol class="list-unstyled">
 			<li><a href="/2014/01">January 2014</a></li>
-			<li><a href="/2013/12">December 2013</a></li>
-			<li><a href="/2013/11">November 2013</a></li>
+			<li>December 2013</li>
+			<li>November 2013</li>
 			<li><a href="/2013/10">October 2013</a></li>
 			<li><a href="/2013/09">September 2013</a></li>
 			<li><a href="/2013/08">August 2013</a></li>
 			<li><a href="/2013/07">July 2013</a></li>
 			<li><a href="/2013/06">June 2013</a></li>
-			<li><a href="/2013/05">May 2013</a></li>
+			<li>May 2013</li>
 			<li><a href="/2013/04">April 2013</a></li>
 			<li><a href="/2013/03">March 2013</a></li>
 			<li><a href="/2013/02">February 2013</a></li>
