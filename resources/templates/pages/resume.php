@@ -17,12 +17,12 @@ Top performer with 10+ years industry experience. Dedicated team member, lifelon
 <h2>EXPERIENCE</h2>
 <br />
 <div class="resume-exp-section">
-    <h3>Broken Bulb Game Studios &middot; Chief Technology Officer</h3>
+    <h3>Chief Technology Officer &middot; Broken Bulb Game Studios</h3>
     <em>Scottsdale, AZ / Telecommute &middot; Nov 2009 - Dec 2013, April 2014 - Present</em>
     <br /><br />
 
     <p>
-    Made key decisions for all aspects of social game infrastructure during 10 product launches, supporting 300,000 daily players and tens of millions of accounts. Reduced expenses by $15,000/month by consolidating underutilized servers and systems. Designed and deployed an autoscaling private cloud environment and managed a hybrid Linux cluster of 30+ servers and virtual machines. Utilized HAProxy for load balancing and Nagios and Cacti for monitoring. Administered high traffic sharded Percona MySQL database installation.
+    Made key decisions for all aspects of social game infrastructure during 10 product launches, supporting 300,000 daily players and tens of millions of accounts. Reduced expenses by $15,000/month by consolidating underutilized servers and systems. Designed and deployed an autoscaling private cloud environment and managed a hybrid Linux cluster of 30+ servers and virtual machines. Utilized HAProxy for load balancing and Nagios and Cacti for monitoring. Administered high traffic sharded Percona MySQL database installation. Used Chef, Ansible, and custom utilities for configuration management.
     </p>
 
     <p>
@@ -31,8 +31,8 @@ Top performer with 10+ years industry experience. Dedicated team member, lifelon
 </div>
 <br />
 <div class="resume-exp-section">
-    <h3>Plain Vanilla Games - DevOps Engineer / API Developer</h3>
-    <em>Telecommute Contractor &middot; Dec 2013 - Mar 2014</em>
+    <h3>DevOps Engineer / API Developer - Plain Vanilla Games</h3>
+    <em>Telecommute / Contract &middot; Dec 2013 - Mar 2014</em>
     <br /><br />
     <p>
     Developed cryptographic receipt verification for Google Play Store and contributed other minor features to the QuizUp API (Python/Flask).
@@ -45,7 +45,7 @@ Top performer with 10+ years industry experience. Dedicated team member, lifelon
 <br />
 <div class="resume-exp-section">
 
-    <h3>pyzam.com &middot; Lead Architect (LAMP)</h3>
+    <h3>Lead Architect (LAMP) &middot; pyzam.com</h3>
     <em>Scottsdale, AZ &middot; Sept 2006 – Nov 2009</em>
     <br /><br />
 
@@ -57,7 +57,7 @@ Top performer with 10+ years industry experience. Dedicated team member, lifelon
 <br />
 <div class="resume-exp-section">
 
-    <h3>Intuit, Inc. &middot; Technical Support Facilitator / Lead Support Specialist</h3>
+    <h3>Technical Support Facilitator / Lead Support Specialist &middot; Intuit, Inc.</h3>
     <em>Tucson, AZ / NY / UT / Manila, Philippines &middot; Nov 2003 – Sept 2006</em>
     <br /><br />
 
