@@ -26,7 +26,7 @@ Top performer with 10+ years industry experience. Dedicated team member, lifelon
     </p>
 
     <p>
-    Designed and developed solutions from high volume automated e-mail systems to game engines and servers. Improved team effectiveness by creating custom admin utilities and analytics to reveal business insights. Co-authored a multi-process Python/Twisted game server supporting thousands of concurrent games per machine. Created custom bash scripts for a wide range of problems including deployment systems. Wrote jQuery and CSS for back-end admin tools.
+    Designed and developed solutions from high volume automated e-mail systems to game engines and servers. Improved team effectiveness by creating custom admin utilities and analytics to reveal business insights. Co-authored a multi-process Python/Twisted game server supporting thousands of concurrent games per machine. Created custom bash scripts for a wide range of problems including deployment systems. Wrote jQuery and CSS for back-end admin tools. Utilized git and Mercurial for source code management.
     </p>
 </div>
 <br />
@@ -38,7 +38,7 @@ Top performer with 10+ years industry experience. Dedicated team member, lifelon
     Developed cryptographic receipt verification for Google Play Store and contributed other minor features to the QuizUp API (Python/Flask).
     </p>
     <p>
-    Supported a variety of systems on Amazon Web Services, including RabbitMQ and ElasticSearch. Researched alternative deployment methods to speed up deploy cycle.
+    Supported a variety of systems on Amazon Web Services, including RabbitMQ and ElasticSearch. Researched alternative deployment methods to speed up deploy cycle. Utilized git and GitHub for source code management.
     </p>
 </div>
 
