@@ -1,6 +1,6 @@
 <div>
-    <div style="text-align:right;float:right">
-        520-271-0930
+	<div style="text-align:right;float:right">
+		<!-- phone number used to be here -->
     </div>
      <div style="text-align:left">
         Matt Parrett

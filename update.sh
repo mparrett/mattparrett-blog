@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Checks out the latest version of MattPHP and copy it to the appropriates places
+
 rm -rfv /tmp/mattphp
 mkdir /tmp/mattphp
 
@@ -10,6 +12,6 @@ mkdir -p resources/templates/sys
 mkdir -p web
 
 cp -Rfv /tmp/mattphp/src/MP/Framework/* src/MP/Framework/
-cp -Rfv /tmp/mattphp/resources/templates/sys/* resources/templates/sys/ 
+cp -Rfv /tmp/mattphp/resources/templates/sys/* resources/templates/sys/
 cp -Rfv /tmp/mattphp/web/index-default.php web/
 
