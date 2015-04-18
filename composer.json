@@ -1,7 +1,7 @@
 {
     "require": {
-        "erusev/parsedown": "1.0.*",
-        "erusev/parsedown-extra": "dev-master",
+        "erusev/parsedown": "1.*",
+        "erusev/parsedown-extra": "0.*",
 		"nickcernis/html-to-markdown": "2.1.*"
     }
 }
