@@ -30,26 +30,26 @@
 	<body>
 		<div class="blog-masthead">
 		<?php
-				echo $this->render('nav.php', $_vars); // Example: how to inherit variables from parent
-			?>
+                echo $this->render('nav.php', $_vars); // Example: how to inherit variables from parent
+            ?>
 		</div>
 		<div class="container">
 			<?php
-				if (isset($_exception) && strlen($_exception) > 0) {
-					$vars = array('ex'=>$_exception);
-					echo $this->render('sys/php-exception.php', $vars);
-				}
-			?>
+                if (isset($_exception) && strlen($_exception) > 0) {
+                    $vars = array('ex'=>$_exception);
+                    echo $this->render('sys/php-exception.php', $vars);
+                }
+            ?>
 			<?php
-				if (isset($_captured) && strlen($_captured) > 0) {
-					$vars = array('captured'=>$_captured);
-					echo $this->render('sys/php-captured-output.php', $vars);
-				}
-			?>
+                if (isset($_captured) && strlen($_captured) > 0) {
+                    $vars = array('captured'=>$_captured);
+                    echo $this->render('sys/php-captured-output.php', $vars);
+                }
+            ?>
 
 			<?php
-				if ($_req->path == '/') {
-			?>
+                if ($_req->path == '/') {
+                    ?>
 				<div class="blog-header">
 					<h1 class="blog-title">Matt Parrett's Blog</h1>
 					<p class="lead blog-description">
@@ -57,16 +57,18 @@
 					</p>
 				</div>
 			<?php
-				} else {
-			?>
+
+                } else {
+                    ?>
 				<br/>
 			<?php
-				}
-			?>
+
+                }
+            ?>
 			<?php
-				// Render child "view" content. Requires $_extends in child template.
-				echo $_child;
-			?>
+                // Render child "view" content. Requires $_extends in child template.
+                echo $_child;
+            ?>
 		</div><!-- /.container -->
 
 		<div class="blog-footer">

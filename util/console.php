@@ -28,7 +28,7 @@ $di->set('app_config', $app_config);
 ////
 // Add DB Capability
 ////
-$di->set('db', function() use (&$di) {
-	$c = $di->get('app_config')['db'];
-	return new \MP\Framework\DB($c['host'], $c['user'], $c['password'], $c['database']);
+$di->set('db', function () use (&$di) {
+    $c = $di->get('app_config')['db'];
+    return new \MP\Framework\DB($c['host'], $c['user'], $c['password'], $c['database']);
 });

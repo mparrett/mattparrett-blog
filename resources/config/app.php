@@ -2,11 +2,13 @@
 
 $app_config = array();
 
-$app_config['app_controller_namespace'] 	= 'MPBlog\\Controllers';
-$app_config['not_found_template'] 			= '404-not-found.php';
-$app_config['default_template'] 			= 'front.php';
-$app_config['project_prefix'] 				= '';
+// Framework config
+$app_config['app_controller_namespace']    = 'MPBlog\\Controllers';
+$app_config['not_found_template']          = '404-not-found.php';
+$app_config['default_template']            = 'front.php';
+$app_config['project_prefix']              = '';
 
+// MySQL config
 $app_config['db'] = array(
     'host'      => 'mysql.test',
     'user'      => 'blog_mp',
@@ -14,12 +16,13 @@ $app_config['db'] = array(
     'database'  => 'blog_mp_dev'
 );
 
+// Memcache config
 $app_config['mc'] = array(
-	'servers' => array(
-		array('127.0.0.1', 11211, 100)
-	),
-	'options' => array(
-		'OPT_COMPRESSION' => true,
-		'OPT_PREFIX_KEY' => 'mp-blog.dev'
-	)
+    'servers' => array(
+        array('127.0.0.1', 11211, 100)
+    ),
+    'options' => array(
+        'OPT_COMPRESSION' => true,
+        'OPT_PREFIX_KEY' => 'mp-blog.dev'
+    )
 );

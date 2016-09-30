@@ -2,122 +2,138 @@
 
 namespace MPBlog\Controllers;
 
-class BlogController extends \MP\Framework\Controller {
-	private $blog;
+/**
+ * mattparrett.com
+ * Controller for /blog
+ */
+class BlogController extends \MP\Framework\Controller
+{
+    private $blog;
 
-	public function initBlog()
-	{
-		if ($this->blog === null)
-			$this->blog = new \MPBlog\App\Blog($this->di->get('db'), $this->di->get('templates'));
-	}
+    public function initBlog()
+    {
+        // Memoize
+        if ($this->blog === null) {
+            $this->blog = new \MPBlog\App\Blog($this->di->get('db'), $this->di->get('templates'));
+        }
+    }
 
-	public function page_md($req, $resp) {
-		$t = $this->di->get('templates');
-		$config = $this->di->get('app_config');
+    /**
+     * Handle markdown page
+     */
+    public function page_md($req, $resp)
+    {
+        $t = $this->di->get('templates');
+        $config = $this->di->get('app_config');
 
-		$vars = array();
-		try {
-			$vars['body'] = $t->render($config['project_prefix'].'/pages/'.$req->path_args[0].'.md');
-			$vars['_req'] = $req;
-			$resp->end($t->render('blog/page.php', $vars));
-		} catch (\Exception $e) {
-			$resp->end('page not found '.$e->getMessage());
-		}
+        $vars = array();
+        try {
+            $vars['body'] = $t->render($config['project_prefix'].'/pages/'.$req->path_args[0].'.md');
+            $vars['_req'] = $req;
+            $resp->end($t->render('blog/page.php', $vars));
+        } catch (\Exception $e) {
+            $resp->end('page not found '.$e->getMessage());
+        }
 
-		return $vars;
-	}
+        return $vars;
+    }
 
-	public function page_php($req, $resp) {
+    /**
+     * Handle PHP page
+     */
+    public function page_php($req, $resp)
+    {
+        $t = $this->di->get('templates');
+        $config = $this->di->get('app_config');
 
-		$t = $this->di->get('templates');
-		$config = $this->di->get('app_config');
+        $vars = array();
+        try {
+            $vars['body'] = $t->render($config['project_prefix'].'/pages/'.$req->path_args[0].'.php');
+            $vars['_req'] = $req;
+            $resp->end($t->render('blog/page.php', $vars));
+        } catch (\Exception $e) {
+            $resp->end('page not found '.$e->getMessage());
+        }
 
-		$vars = array();
-		try {
-			$vars['body'] = $t->render($config['project_prefix'].'/pages/'.$req->path_args[0].'.php');
-			$vars['_req'] = $req;
-			$resp->end($t->render('blog/page.php', $vars));
-		} catch (\Exception $e) {
-			$resp->end('page not found '.$e->getMessage());
-		}
+        return $vars;
+    }
 
-		return $vars;
-	}
+    public function index()
+    {
+        $this->initBlog();
 
-	public function index() {
-		$this->initBlog();
+        $t = $this->di->get('templates');
+        $config = $this->di->get('app_config');
 
-		$t = $this->di->get('templates');
-		$config = $this->di->get('app_config');
+        // Get last 5 posts
+        $vars['posts'] = $this->blog->getPosts(0, 5, '`created` DESC');
+        $vars['about'] = $t->render($config['project_prefix'].'/pages/about.md');
 
-		// Get last 5 posts
-		$vars['posts'] = $this->blog->getPosts(0, 5, '`created` DESC');
-		$vars['about'] = $t->render($config['project_prefix'].'/pages/about.md');
+        $this->template = 'front.php';
 
-		$this->template = 'front.php';
+        return $vars;
+    }
 
-		return $vars;
-	}
+    public function archive($req, $resp)
+    {
+        list($yyyy, $mm) = $req->path_args;
 
-	public function archive($req, $resp) {
+        $this->initBlog();
 
-		list($yyyy, $mm) = $req->path_args;
+        $posts = $this->blog->getArchivedPosts($yyyy, $mm);
 
-		$this->initBlog();
+        $this->template = 'posts-list.php';
 
-		$posts = $this->blog->getArchivedPosts($yyyy, $mm);
+        return array('posts' => $posts);
+    }
 
-		$this->template = 'posts-list.php';
+    public function posts()
+    {
+        $this->initBlog();
 
-		return array('posts' => $posts);
-	}
+        $posts = $this->blog->getAllPosts();
 
-	public function posts() {
-		$this->initBlog();
+        $this->template = 'posts-list.php';
 
-		$posts = $this->blog->getAllPosts();
+        return array('posts' => $posts);
+    }
 
-		$this->template = 'posts-list.php';
+    public function post($req, $resp)
+    {
+        $id = (int)$req->path_args[2];
 
-		return array('posts' => $posts);
-	}
+        $this->initBlog();
 
-	public function post($req, $resp) {
+        $post = $this->blog->getPostById($id);
 
-		$id = (int)$req->path_args[2];
+        if (!$post) {
+            return $this->notFound();
+        }
 
-		$this->initBlog();
+        return array('post' => $post, 'next' => $id + 1, 'prev' => $id - 1);
+    }
 
-		$post = $this->blog->getPostById($id);
+    public function post_shortlink($req, $resp)
+    {
+        list($year, $month, $shortlink) = $req->path_args;
 
-		if (!$post)
-			return $this->notFound();
+        $this->initBlog();
+        $post = $this->blog->getPostByLink($shortlink);
 
-		return array('post' => $post, 'next' => $id + 1, 'prev' => $id - 1);
-	}
+        if (!$post) {
+            $resp->end('not found');
+            return;
+        }
 
-	public function post_shortlink($req, $resp) {
+        $vars['post'] = $post;
+        $vars['_req'] = $req;
 
-		list($year, $month, $shortlink) = $req->path_args;
+        // This produces equivalent output
+        //$t = $this->di->get('templates');
+        //$resp->end($t->render('blog/post.php', $vars));
 
-		$this->initBlog();
-		$post = $this->blog->getPostByLink($shortlink);
+        $this->template = 'blog/post.php';
 
-		if (!$post) {
-			$resp->end('not found');
-			return;
-		}
-
-		$vars['post'] = $post;
-		$vars['_req'] = $req;
-
-		// This produces equivalent output
-		//$t = $this->di->get('templates');
-		//$resp->end($t->render('blog/post.php', $vars));
-
-		$this->template = 'blog/post.php';
-
-		return $vars;
-	}
-
+        return $vars;
+    }
 }

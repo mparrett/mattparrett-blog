@@ -1,5 +1,5 @@
 <?php
-	$_extends = 'layout.php';
+    $_extends = 'layout.php';
 ?>
 <div class="row">
     <div class="jumbotron">

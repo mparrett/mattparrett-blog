@@ -1,12 +1,12 @@
 <?php
     /**
      * @license
-     * 
+     *
      * PHP Error
-     * 
+     *
      * Copyright (c) 2012 Joseph Lenton
      * All rights reserved.
-     * 
+     *
      * Redistribution and use in source and binary forms, with or without
      * modification, are permitted provided that the following conditions are met:
      *     * Redistributions of source code must retain the above copyright
@@ -17,7 +17,7 @@
      *     * Neither the name of the <organization> nor the
      *       names of its contributors may be used to endorse or promote products
      *       derived from this software without specific prior written permission.
-     * 
+     *
      * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
      * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
      * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
      * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
      * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
      * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-     * 
+     *
      * Uses:
      *      JSMin-php   https://github.com/rgrove/jsmin-php/
      *      jQuery      http://jquery.com/
@@ -36,74 +36,73 @@
 
     /**
      * PHP Error
-     * 
+     *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-     * 
+     *
      * WARNING! It is downright _DANGEROUS_ to use this in production, on
      * a live website. It should *ONLY* be used for development.
-     * 
+     *
      * PHP Error will kill your environment at will, clear the output
      * buffers, and allows HTML injection from exceptions.
-     * 
+     *
      * In future versions it plans to do far more then that.
-     * 
+     *
      * If you use it in development, awesome! If you use it in production,
      * you're an idiot.
-     * 
+     *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-     * 
+     *
      * = Info
-     * 
+     *
      * A small API for replacing the standard PHP errors, with prettier
      * error reporting. This will change the error reporting level, and this
      * is deliberate, as I believe in strict development errors.
-     * 
+     *
      * simple usage:
-     * 
+     *
      *      \php_error\reportErrors();
-     * 
+     *
      * Advanced example:
-     * 
+     *
      * There is more too it if you want more customized error handling. You
      * can pass in options, to customize the setup, and you get back a
      * handler you can alter at runtime.
-     * 
+     *
      *      $handler = new \php_error\ErrorHandler( $myOptions );
      *      $handler->turnOn();
-     * 
+     *
      * There should only ever be one handler! This is an (underdstandable)
      * limitation in PHP. It's because if an exception or error is raised,
      * then there is a single point of handling it.
-     * 
+     *
      * = INI Options
-     * 
+     *
      * - php_error.force_disabled When set to a true value (such as on),
      *                            this forces this to be off.
      *                            This is so you can disable this script
      *                            in your production servers ini file,
      *                            incase you accidentally upload this there.
-     * 
+     *
      * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
-     * 
+     *
      * @author Joseph Lenton | https://github.com/josephlenton
      */
 
     namespace php_error;
 
-    use \php_error\ErrorException,
-        \php_error\FileLinesSet,
-        \php_error\ErrorHandler,
+use \php_error\ErrorException;
+    use \php_error\FileLinesSet;
+    use \php_error\ErrorHandler;
+    use \php_error\JSMin;
+    use \php_error\JSMinException;
 
-        \php_error\JSMin,
-        \php_error\JSMinException;
+    use \Closure;
+    use \Exception;
+    use \InvalidArgumentException;
 
-    use \Closure,
-        \Exception,
-        \InvalidArgumentException;
-
-    use \ReflectionMethod,
-        \ReflectionFunction,
-        \ReflectionParameter;
+    use \ReflectionMethod;
+    use \ReflectionFunction;
+    use \ReflectionParameter;
 
     global $_php_error_already_setup,
            $_php_error_global_handler,
@@ -112,46 +111,46 @@
     /*
      * Avoid being run twice.
      */
-    if ( empty($_php_error_already_setup) ) {
+    if (empty($_php_error_already_setup)) {
         $_php_error_already_setup = true;
 
         /*
          * These are used as token identifiers by PHP.
-         * 
+         *
          * If they are missing, then they should never pop out of PHP,
          * so we just give them their future value.
-         * 
+         *
          * They are primarily here so I don't have to alter the 5.3
          * compliant code. Instead I can delete pre-5.3 code (this
          * code), in the future.
-         * 
+         *
          * As long as the value is unique, and does not clash with PHP,
          * then any number could be used. That is why they start counting
          * at 100,000.
          */
-        if ( ! defined('T_DIR') ) {
-            define( 'T_DIR', 100001 );
+        if (! defined('T_DIR')) {
+            define('T_DIR', 100001);
         }
-        if ( ! defined('T_GOTO') ) {
-            define( 'T_GOTO', 100002 );
+        if (! defined('T_GOTO')) {
+            define('T_GOTO', 100002);
         }
-        if ( ! defined('T_NAMESPACE') ) {
-            define( 'T_NAMESPACE', 100003 );
+        if (! defined('T_NAMESPACE')) {
+            define('T_NAMESPACE', 100003);
         }
-        if ( ! defined('T_NS_C') ) {
-            define( 'T_NS_C', 100004 );
+        if (! defined('T_NS_C')) {
+            define('T_NS_C', 100004);
         }
-        if ( ! defined('T_NS_SEPARATOR') ) {
-            define( 'T_NS_SEPARATOR', 100005 );
+        if (! defined('T_NS_SEPARATOR')) {
+            define('T_NS_SEPARATOR', 100005);
         }
-        if ( ! defined('T_USE') ) {
-            define( 'T_USE', 100006 );
+        if (! defined('T_USE')) {
+            define('T_USE', 100006);
         }
 
         /*
          * Check if it's empty, in case this file is loaded multiple times.
          */
-        if ( ! isset($_php_error_global_handler) ) {
+        if (! isset($_php_error_global_handler)) {
             $_php_error_global_handler = null;
 
             $_php_error_is_ini_enabled = false;
@@ -161,9 +160,9 @@
              * check that display errors is on
              * and ensure we are *not* a command line script.
              */
-            $_php_error_is_ini_enabled = 
-                    ! @get_cfg_var( 'php_error.force_disabled' ) &&
-                    ! @get_cfg_var( 'php_error.force_disable'  ) &&
+            $_php_error_is_ini_enabled =
+                    ! @get_cfg_var('php_error.force_disabled') &&
+                    ! @get_cfg_var('php_error.force_disable') &&
                       @ini_get('display_errors') === '1'         &&
                        PHP_SAPI !== 'cli'
             ;
@@ -172,18 +171,19 @@
         /**
          * This is shorthand for turning off error handling,
          * calling a block of code, and then turning it on.
-         * 
+         *
          * However if 'reportErrors' has not been called,
          * then this will silently do nothing.
-         * 
+         *
          * @param callback A PHP function to call.
          * @return The result of calling the callback.
          */
-        function withoutErrors( $callback ) {
+        function withoutErrors($callback)
+        {
             global $_php_error_global_handler;
 
-            if ( $_php_error_global_handler !== null ) {
-                return $_php_error_global_handler->withoutErrors( $callback );
+            if ($_php_error_global_handler !== null) {
+                return $_php_error_global_handler->withoutErrors($callback);
             } else {
                 return $callback();
             }
@@ -191,24 +191,25 @@
 
         /**
          * Turns on error reporting, and returns the handler.
-         * 
+         *
          * If you just want error reporting on, then don't bother
          * catching the handler. If you're building something
          * clever, like a framework, then you might want to grab
          * and use it.
-         * 
+         *
          * Note that calling this a second time will replace the
          * global error handling with a new error handler.
          * The existing one will be turned off, and the new one
          * turned on.
-         * 
+         *
          * You can't use two at once!
-         * 
+         *
          * @param options Optional, options declaring how PHP Error should be setup and used.
          * @return The ErrorHandler used for reporting errors.
          */
-        function reportErrors( $options=null ) {
-            $handler = new ErrorHandler( $options );
+        function reportErrors($options=null)
+        {
+            $handler = new ErrorHandler($options);
             return $handler->turnOn();
         }
 
@@ -227,18 +228,18 @@
              *  {closure}()
              *  blah::foo()
              *  foo()
-             * 
+             *
              * It is:
              *      a closure
              *      or a method or function
              *      followed by parenthesis '()'
-             * 
+             *
              *      a function is 'namespace function'
              *      a method is 'namespace class::function', or 'namespace class->function'
              *      the whole namespace is optional
              *          namespace is made up of an '\' and then repeating 'namespace\'
              *          both the first slash, and the repeating 'namespace\', are optional
-             * 
+             *
              * 'END' matches it at the end of a string, the other one does not.
              */
             const REGEX_METHOD_OR_FUNCTION_END = '/(\\{closure\\})|(((\\\\)?(\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*\\\\)*)?\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*(::[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?)\\(\\)$/';
@@ -253,7 +254,7 @@
              * where the error is reported. This is the number
              * of lines around the line in question,
              * including that line.
-             * 
+             *
              * So '9' will be the error line + 4 lines above + 4 lines below.
              */
             const NUM_FILE_LINES = 13;
@@ -271,7 +272,7 @@
             /**
              * At the time of writing, scalar type hints are unsupported.
              * By scalar, I mean 'string' and 'integer'.
-             * 
+             *
              * If they do get added, this is here as a trap to turn scalar
              * type hint warnings on and off.
              */
@@ -508,7 +509,7 @@
             /**
              * A list of methods which are known to call the autoloader,
              * but should not error, if the class is not found.
-             * 
+             *
              * They are allowed to fail, so we don't store a class not
              * found exception if they do.
              */
@@ -530,7 +531,8 @@
                     'application/xhtml+xml'
             );
 
-            private static function isIIS() {
+            private static function isIIS()
+            {
                 return (
                                 isset($_SERVER['SERVER_SOFTWARE']) &&
                                 strpos($_SERVER['SERVER_SOFTWARE'], 'IIS/') !== false
@@ -549,7 +551,8 @@
              * know it's not PHP. However there is no "yes, this is
              * definitely a normal HTML response" flag we can check.
              */
-            private static function isNonPHPRequest() {
+            private static function isNonPHPRequest()
+            {
                 /*
                  * Check if we are a mime type that isn't allowed.
                  *
@@ -558,18 +561,18 @@
                  */
                 $response = ErrorHandler::getResponseHeaders();
 
-                foreach ( $response as $key => $value ) {
-                    if ( strtolower($key) === 'content-type' ) {
+                foreach ($response as $key => $value) {
+                    if (strtolower($key) === 'content-type') {
                         $found = true;
 
-                        foreach ( ErrorHandler::$ALLOWED_RETURN_MIME_TYPES as $type ) {
-                            if ( stripos($value, $type) !== false ) {
+                        foreach (ErrorHandler::$ALLOWED_RETURN_MIME_TYPES as $type) {
+                            if (stripos($value, $type) !== false) {
                                 $found = true;
                                 break;
                             }
                         }
 
-                        if ( ! $found ) {
+                        if (! $found) {
                             return true;
                         }
 
@@ -583,11 +586,12 @@
             /**
              * Looks up a description for the symbol given,
              * and if found, it is returned.
-             * 
+             *
              * If it's not found, then the symbol given is returned.
              */
-            private static function phpSymbolToDescription( $symbol ) {
-                if ( isset(ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol]) ) {
+            private static function phpSymbolToDescription($symbol)
+            {
+                if (isset(ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol])) {
                     return ErrorHandler::$PHP_SYMBOL_MAPPINGS[$symbol];
                 } else {
                     return "'$symbol'";
@@ -596,27 +600,28 @@
 
             /**
              * Attempts to syntax highlight the code snippet done.
-             * 
+             *
              * This is then returned as HTML, ready to be dumped to the screen.
-             * 
+             *
              * @param code An array of code lines to syntax highlight.
              * @return HTML version of the code given, syntax highlighted.
              */
-            private static function syntaxHighlight( $code ) {
+            private static function syntaxHighlight($code)
+            {
                 $syntaxMap = ErrorHandler::$syntaxMap;
 
                 // @supress invalid code raises a warning
-                $tokens = @token_get_all( "<?php " . $code . " ?" . ">" );
+                $tokens = @token_get_all("<?php " . $code . " ?" . ">");
                 $html = array();
                 $len = count($tokens)-1;
                 $inString = false;
                 $stringBuff = null;
                 $skip = false;
 
-                for ( $i = 1; $i < $len; $i++ ) {
+                for ($i = 1; $i < $len; $i++) {
                     $token = $tokens[$i];
 
-                    if ( is_array($token) ) {
+                    if (is_array($token)) {
                         $type = $token[0];
                         $code = $token[1];
                     } else {
@@ -625,21 +630,21 @@
                     }
 
                     // work out any whitespace padding
-                    if ( strpos($code, "\n") !== false && trim($code) === '' ) {
-                        if ( $inString ) {
+                    if (strpos($code, "\n") !== false && trim($code) === '') {
+                        if ($inString) {
                             $html[]= "<span class='syntax-string'>" . join('', $stringBuff);
                             $stringBuff = array();
                         }
-                    } else if ( $code === '&' ) {
-                        if ( $i < $len ) {
+                    } elseif ($code === '&') {
+                        if ($i < $len) {
                             $next = $tokens[$i+1];
 
-                            if ( is_array($next) && $next[0] === T_VARIABLE ) {
+                            if (is_array($next) && $next[0] === T_VARIABLE) {
                                 $type = 'reference_ampersand';
                             }
                         }
-                    } else if ( $code === '"' || $code === "'" ) {
-                        if ( $inString ) {
+                    } elseif ($code === '"' || $code === "'") {
+                        if ($inString) {
                             $html[]= "<span class='syntax-string'>" . join('', $stringBuff) . htmlspecialchars($code) . "</span>";
                             $stringBuff = null;
                             $skip = true;
@@ -648,42 +653,42 @@
                         }
 
                         $inString = !$inString;
-                    } else if ( $type === T_STRING ) {
+                    } elseif ($type === T_STRING) {
                         $matches = array();
                         preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $code, $matches);
 
-                        if ( $matches && strlen($matches[0]) === strlen($code) ) {
+                        if ($matches && strlen($matches[0]) === strlen($code)) {
                             $type = 'const';
                         }
                     }
 
-                    if ( $skip ) {
+                    if ($skip) {
                         $skip = false;
                     } else {
-                        $code = htmlspecialchars( $code );
+                        $code = htmlspecialchars($code);
 
-                        if ( $type !== null && isset($syntaxMap[$type]) ) {
+                        if ($type !== null && isset($syntaxMap[$type])) {
                             $class = $syntaxMap[$type];
 
-                            if ( $type === T_CONSTANT_ENCAPSED_STRING && strpos($code, "\n") !== false ) {
+                            if ($type === T_CONSTANT_ENCAPSED_STRING && strpos($code, "\n") !== false) {
                                 $append = "<span class='$class'>" .
                                             join(
                                                     "</span>\n<span class='$class'>",
-                                                    explode( "\n", $code )
+                                                    explode("\n", $code)
                                             ) .
                                         "</span>" ;
-                            } else if ( strrpos($code, "\n") === strlen($code)-1 ) {
+                            } elseif (strrpos($code, "\n") === strlen($code)-1) {
                                 $append = "<span class='$class'>" . substr($code, 0, strlen($code)-1) . "</span>\n";
                             } else {
                                 $append = "<span class='$class'>$code</span>";
                             }
-                        } else if ( $inString && $code !== '"' ) {
+                        } elseif ($inString && $code !== '"') {
                             $append = "<span class='syntax-string'>$code</span>";
                         } else {
                             $append = $code;
                         }
 
-                        if ( $inString ) {
+                        if ($inString) {
                             $stringBuff[]= $append;
                         } else {
                             $html[]= $append;
@@ -691,37 +696,38 @@
                     }
                 }
 
-                if ( $stringBuff !== null ) {
+                if ($stringBuff !== null) {
                     $html[]= "<span class='syntax-string'>" . join('', $stringBuff) . '</span>';
                     $stringBuff = null;
                 }
 
-                return join( '', $html );
+                return join('', $html);
             }
 
             /**
              * Splits a given function name into it's 'class, function' parts.
              * If there is no class, then null is returned.
-             * 
+             *
              * It also returns these parts in an array of: array( $className, $functionName );
-             * 
+             *
              * Usage:
-             * 
+             *
              *      list( $class, $function ) = ErrorHandler::splitFunction( $name );
-             * 
+             *
              * @param name The function name to split.
              * @return An array containing class and function name.
              */
-            private static function splitFunction( $name ) {
-                $name = preg_replace( '/\\(\\)$/', '', $name );
+            private static function splitFunction($name)
+            {
+                $name = preg_replace('/\\(\\)$/', '', $name);
 
-                if ( strpos($name, '::') !== false ) {
-                    $parts = explode( '::', $name );
+                if (strpos($name, '::') !== false) {
+                    $parts = explode('::', $name);
                     $className = $parts[0];
                     $type = '::';
                     $functionName = $parts[1];
-                } else if ( strpos($name, '->') !== false ) {
-                    $parts = explode( '->', $name );
+                } elseif (strpos($name, '->') !== false) {
+                    $parts = explode('->', $name);
                     $className = $parts[0];
                     $type = '->';
                     $functionName = $parts[1];
@@ -734,28 +740,29 @@
                 return array( $className, $type, $functionName );
             }
 
-            private static function newArgument( $name, $type=false, $isPassedByReference=false, $isOptional=false, $optionalValue=null, $highlight=false ) {
-                if ( $name instanceof ReflectionParameter ) {
+            private static function newArgument($name, $type=false, $isPassedByReference=false, $isOptional=false, $optionalValue=null, $highlight=false)
+            {
+                if ($name instanceof ReflectionParameter) {
                     $highlight = func_num_args() > 1 ?
                             $highlight = $type :
                             false;
 
                     $klass = $name->getDeclaringClass();
                     $functionName = $name->getDeclaringFunction()->name;
-                    if ( $klass !== null ) {
+                    if ($klass !== null) {
                         $klass = $klass->name;
                     }
 
                     $export = ReflectionParameter::export(
-                            ( $klass ?
+                            ($klass ?
                                     array( "\\$klass", $functionName ) :
-                                    $functionName ),
-                            $name->name, 
+                                    $functionName),
+                            $name->name,
                             true
                     );
 
                     $paramType = preg_replace('/.*?(\w+)\s+\$'.$name->name.'.*/', '\\1', $export);
-                    if ( strpos($paramType, '[') !== false || strlen($paramType) === 0 ) {
+                    if (strpos($paramType, '[') !== false || strlen($paramType) === 0) {
                         $paramType = null;
                     }
 
@@ -764,17 +771,17 @@
                             $paramType,
                             $name->isPassedByReference(),
                             $name->isDefaultValueAvailable(),
-                            ( $name->isDefaultValueAvailable() ?
-                                    var_export( $name->getDefaultValue(), true ) :
-                                    null ),
-                            ( func_num_args() > 1 ?
+                            ($name->isDefaultValueAvailable() ?
+                                    var_export($name->getDefaultValue(), true) :
+                                    null),
+                            (func_num_args() > 1 ?
                                     $type :
-                                    false )
+                                    false)
                     );
                 } else {
                     return array(
                             'name'              => $name,
-                            'has_type'          => ( $type !== false ),
+                            'has_type'          => ($type !== false),
                             'type'              => $type,
                             'is_reference'      => $isPassedByReference,
                             'has_default'       => $isOptional,
@@ -784,52 +791,53 @@
                 }
             }
 
-            private static function syntaxHighlightFunctionMatch( $match, &$stackTrace, $highlightArg=null, &$numHighlighted=0 ) {
-                list( $className, $type, $functionName ) = ErrorHandler::splitFunction( $match );
+            private static function syntaxHighlightFunctionMatch($match, &$stackTrace, $highlightArg=null, &$numHighlighted=0)
+            {
+                list($className, $type, $functionName) = ErrorHandler::splitFunction($match);
 
                 // is class::method()
-                if ( $className !== null ) {
-                    $reflectFun = new ReflectionMethod( $className, $functionName );
+                if ($className !== null) {
+                    $reflectFun = new ReflectionMethod($className, $functionName);
                 // is a function
-                } else if ( $functionName === '{closure}' ) {
+                } elseif ($functionName === '{closure}') {
                     return '<span class="syntax-variable">$closure</span>';
                 } else {
-                    $reflectFun = new ReflectionFunction( $functionName );
+                    $reflectFun = new ReflectionFunction($functionName);
                 }
 
-                if ( $reflectFun ) {
+                if ($reflectFun) {
                     $params = $reflectFun->getParameters();
 
-                    if ( $params ) {
+                    if ($params) {
                         $args = array();
                         $min = 0;
-                        foreach( $params as $i => $param ) {
-                            $arg = ErrorHandler::newArgument( $param );
+                        foreach ($params as $i => $param) {
+                            $arg = ErrorHandler::newArgument($param);
 
-                            if ( ! $arg['has_default'] ) {
+                            if (! $arg['has_default']) {
                                 $min = $i;
                             }
 
                             $args[]= $arg;
                         }
 
-                        if ( $highlightArg !== null ) {
-                            for ( $i = $highlightArg; $i <= $min; $i++ ) {
+                        if ($highlightArg !== null) {
+                            for ($i = $highlightArg; $i <= $min; $i++) {
                                 $args[$i]['is_highlighted'] = true;
                             }
 
                             $numHighlighted = $min-$highlightArg;
                         }
 
-                        if ( $className !== null ) {
-                            if ( $stackTrace && isset($stackTrace[1]) && isset($stackTrace[1]['type']) ) {
-                                $type = htmlspecialchars( $stackTrace[1]['type'] );
+                        if ($className !== null) {
+                            if ($stackTrace && isset($stackTrace[1]) && isset($stackTrace[1]['type'])) {
+                                $type = htmlspecialchars($stackTrace[1]['type']);
                             }
                         } else {
                             $type = null;
                         }
 
-                        return ErrorHandler::syntaxHighlightFunction( $className, $type, $functionName, $args );
+                        return ErrorHandler::syntaxHighlightFunction($className, $type, $functionName, $args);
                     }
                 }
 
@@ -840,72 +848,73 @@
              * Returns the values given, as HTML, syntax highlighted.
              * It's a shorter, slightly faster, more no-nonsense approach
              * then 'syntaxHighlight'.
-             * 
+             *
              * This is for syntax highlighting:
              *  - fun( [args] )
              *  - class->fun( [args] )
              *  - class::fun( [args] )
-             * 
+             *
              * Class and type can be null, to denote no class, but are not optional.
              */
-            private static function syntaxHighlightFunction( $class, $type, $fun, &$args=null ) {
+            private static function syntaxHighlightFunction($class, $type, $fun, &$args=null)
+            {
                 $info = array();
 
                 // set the info
-                if ( isset($class) && $class && isset($type) && $type ) {
-                    if ( $type === '->' ) {
+                if (isset($class) && $class && isset($type) && $type) {
+                    if ($type === '->') {
                         $type = '-&gt;';
                     }
 
                     $info []= "<span class='syntax-class'>$class</span>$type";
                 }
 
-                if ( isset($fun) && $fun ) {
+                if (isset($fun) && $fun) {
                     $info []= "<span class='syntax-function'>$fun</span>";
                 }
 
-                if ( $args ) {
+                if ($args) {
                     $info []= '( ';
 
                     foreach ($args as $i => $arg) {
-                        if ( $i > 0 ) {
+                        if ($i > 0) {
                             $info[]= ', ';
                         }
 
-                        if ( is_string($arg) ) {
+                        if (is_string($arg)) {
                             $info[]= $arg;
                         } else {
                             $highlight = $arg['is_highlighted'];
                             $name = $arg['name'];
 
-                            if ( $highlight ) {
+                            if ($highlight) {
                                 $info[]= '<span class="syntax-higlight-variable">';
                             }
 
-                            if ( $name === '_' ) {
+                            if ($name === '_') {
                                 $info[]= '<span class="syntax-variable-not-important">';
                             }
 
-                            if ( $arg['has_type'] ) {
+                            if ($arg['has_type']) {
                                 $info []= "<span class='syntax-class'>";
-                                    $info []= $arg['type'];
+                                $info []= $arg['type'];
                                 $info []= '</span> ';
                             }
 
-                            if ( $arg['is_reference'] ) {
+                            if ($arg['is_reference']) {
                                 $info []= '<span class="syntax-function">&amp;</span>';
                             }
 
                             $info []= "<span class='syntax-variable'>\$$name</span>";
 
-                            if ( $arg['has_default'] ) {
+                            if ($arg['has_default']) {
                                 $info []= '=<span class="syntax-literal">' . $arg['default_val'] . '</span>';
                             }
 
-                            if ( $name === '_' ) {
+                            if ($name === '_') {
                                 $info[]= '</span>';
                             }
-                            if ( $highlight ) {
+                            if ($highlight) {
                                 $info[]= '</span>';
                             }
                         }
@@ -916,24 +925,25 @@
                     $info []= '()';
                 }
 
-                return join( '', $info );
+                return join('', $info);
             }
 
             /**
              * Checks if the item is in options, and if it is, then it is removed and returned.
-             * 
+             *
              * If it is not found, or if options is not an array, then the alt is returned.
              */
-            private static function optionsPop( &$options, $key, $alt=null ) {
-                if ( $options && isset($options[$key]) ) {
+            private static function optionsPop(&$options, $key, $alt=null)
+            {
+                if ($options && isset($options[$key])) {
                     $val = $options[$key];
-                    unset( $options[$key] );
+                    unset($options[$key]);
 
                     return $val;
                 } else {
-                    $iniAlt = @get_cfg_var( ErrorHandler::PHP_ERROR_INI_PREFIX . '.' . $key );
+                    $iniAlt = @get_cfg_var(ErrorHandler::PHP_ERROR_INI_PREFIX . '.' . $key);
 
-                    if ( $iniAlt !== false ) {
+                    if ($iniAlt !== false) {
                         return $iniAlt;
                     } else {
                         return $alt;
@@ -941,33 +951,35 @@
                 }
             }
 
-            private static function folderTypeToCSS( $type ) {
-                if ( $type === ErrorHandler::FILE_TYPE_ROOT ) {
+            private static function folderTypeToCSS($type)
+            {
+                if ($type === ErrorHandler::FILE_TYPE_ROOT) {
                     return 'file-root';
-                } else if ( $type === ErrorHandler::FILE_TYPE_IGNORE ) {
+                } elseif ($type === ErrorHandler::FILE_TYPE_IGNORE) {
                     return 'file-ignore';
-                } else if ( $type === ErrorHandler::FILE_TYPE_APPLICATION ) {
+                } elseif ($type === ErrorHandler::FILE_TYPE_APPLICATION) {
                     return 'file-app';
                 } else {
                     return 'file-common';
                 }
             }
 
-            private static function isFolderType( &$folders, $longest, $file ) {
-                $parts = explode( '/', $file );
+            private static function isFolderType(&$folders, $longest, $file)
+            {
+                $parts = explode('/', $file);
 
-                $len = min( count($parts), $longest );
+                $len = min(count($parts), $longest);
 
-                for ( $i = $len; $i > 0; $i-- ) {
-                    if ( isset($folders[$i]) ) {
+                for ($i = $len; $i > 0; $i--) {
+                    if (isset($folders[$i])) {
                         $folderParts = &$folders[ $i ];
 
                         $success = false;
-                        for ( $j = 0; $j < count($folderParts); $j++ ) {
+                        for ($j = 0; $j < count($folderParts); $j++) {
                             $folderNames = $folderParts[$j];
 
-                            for ( $k = 0; $k < count($folderNames); $k++ ) {
-                                if ( $folderNames[$k] === $parts[$k] ) {
+                            for ($k = 0; $k < count($folderNames); $k++) {
+                                if ($folderNames[$k] === $parts[$k]) {
                                     $success = true;
                                 } else {
                                     $success = false;
@@ -976,7 +988,7 @@
                             }
                         }
 
-                        if ( $success ) {
+                        if ($success) {
                             return true;
                         }
                     }
@@ -985,19 +997,20 @@
                 return false;
             }
 
-            private static function setFolders( &$origFolders, &$longest, $folders ) {
+            private static function setFolders(&$origFolders, &$longest, $folders)
+            {
                 $newFolders = array();
                 $newLongest = 0;
 
-                if ( $folders ) {
-                    if ( is_array($folders) ) {
-                        foreach ( $folders as $folder ) {
-                            ErrorHandler::setFoldersInner( $newFolders, $newLongest, $folder );
+                if ($folders) {
+                    if (is_array($folders)) {
+                        foreach ($folders as $folder) {
+                            ErrorHandler::setFoldersInner($newFolders, $newLongest, $folder);
                         }
-                    } else if ( is_string($folders) ) {
-                        ErrorHandler::setFoldersInner( $newFolders, $newLongest, $folders );
+                    } elseif (is_string($folders)) {
+                        ErrorHandler::setFoldersInner($newFolders, $newLongest, $folders);
                     } else {
-                        throw new Exception( "Unknown value given for folder: " . $folders );
+                        throw new Exception("Unknown value given for folder: " . $folders);
                     }
                 }
 
@@ -1005,15 +1018,16 @@
                 $longest     = $newLongest;
             }
 
-            private static function setFoldersInner( &$newFolders, &$newLongest, $folder ) {
-                $folder = str_replace( '\\', '/', $folder );
-                $folder = preg_replace( '/(^\\/+)|(\\/+$)/', '', $folder );
-                $parts  = explode( '/', $folder );
-                $count  = count( $parts );
+            private static function setFoldersInner(&$newFolders, &$newLongest, $folder)
+            {
+                $folder = str_replace('\\', '/', $folder);
+                $folder = preg_replace('/(^\\/+)|(\\/+$)/', '', $folder);
+                $parts  = explode('/', $folder);
+                $count  = count($parts);
 
-                $newLongest = max( $newLongest, $count );
+                $newLongest = max($newLongest, $count);
                 
-                if ( isset($newFolders[$count]) ) {
+                if (isset($newFolders[$count])) {
                     $folds = &$newFolders[$count];
                     $folds[]= $parts;
                 } else {
@@ -1021,15 +1035,16 @@
                 }
             }
 
-            private static function getRequestHeaders() {
-                if ( function_exists('getallheaders') ) {
+            private static function getRequestHeaders()
+            {
+                if (function_exists('getallheaders')) {
                     return getallheaders();
                 } else {
                     $headers = array();
                     
-                    foreach ( $_SERVER as $key => $value ) {
-                        if ( strpos($key, 'HTTP_') === 0 ) {
-                            $key = str_replace( " ", "-", ucwords(strtolower( str_replace("_", " ", substr($key, 5)) )) ); 
+                    foreach ($_SERVER as $key => $value) {
+                        if (strpos($key, 'HTTP_') === 0) {
+                            $key = str_replace(" ", "-", ucwords(strtolower(str_replace("_", " ", substr($key, 5)))));
                             $headers[ $key ] = $value;
                         }
                     }
@@ -1038,47 +1053,49 @@
                 }
             }
 
-            private static function getResponseHeaders() {
+            private static function getResponseHeaders()
+            {
                 $headers = function_exists('apache_response_headers') ?
                         apache_response_headers() :
                         array() ;
 
                 /*
                  * Merge the headers_list into apache_response_headers.
-                 * 
+                 *
                  * This is because sometimes things are in one, which are
                  * not present in the other.
                  */
-                if ( function_exists('headers_list') ) {
+                if (function_exists('headers_list')) {
                     $hList = headers_list();
 
                     foreach ($hList as $header) {
                         $header = explode(":", $header);
-                        $headers[ array_shift($header) ] = trim( implode(":", $header) );
+                        $headers[ array_shift($header) ] = trim(implode(":", $header));
                     }
                 }
 
                 return $headers;
             }
 
-            public static function identifyTypeHTML( $arg, $recurseLevels=1 ) {
-                if ( ! is_array($arg) && !is_object($arg) ) {
-                    if ( is_string($arg) ) {
+            public static function identifyTypeHTML($arg, $recurseLevels=1)
+            {
+                if (! is_array($arg) && !is_object($arg)) {
+                    if (is_string($arg)) {
                         return "<span class='syntax-string'>&quot;" . htmlentities($arg) . "&quot;</span>";
                     } else {
-                        return "<span class='syntax-literal'>" . var_export( $arg, true ) . '</span>';
+                        return "<span class='syntax-literal'>" . var_export($arg, true) . '</span>';
                     }
-                } else if ( is_array($arg) ) {
-                    if ( count($arg) === 0 ) {
+                } elseif (is_array($arg)) {
+                    if (count($arg) === 0) {
                         return "[]";
-                    } else if ( $recurseLevels > 0 ) {
+                    } elseif ($recurseLevels > 0) {
                         $argArr = array();
 
                         foreach ($arg as $ag) {
-                            $argArr[]= ErrorHandler::identifyTypeHTML( $ag, $recurseLevels-1 );
+                            $argArr[]= ErrorHandler::identifyTypeHTML($ag, $recurseLevels-1);
                         }
 
-                        if ( ($recurseLevels % 2) === 0 ) {
+                        if (($recurseLevels % 2) === 0) {
                             return "["  . join(', ', $argArr) .  "]";
                         } else {
                             return "[ " . join(', ', $argArr) . " ]";
@@ -1086,12 +1103,12 @@
                     } else {
                         return "[...]";
                     }
-                } else if ( get_class($arg) === 'Closure' ) {
+                } elseif (get_class($arg) === 'Closure') {
                     return '<span class="syntax-variable">$Closure</span>()';
                 } else {
-                    $argKlass = get_class( $arg );
+                    $argKlass = get_class($arg);
 
-                    if ( preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $argKlass) ) {
+                    if (preg_match(ErrorHandler::REGEX_PHP_CONST_IDENTIFIER, $argKlass)) {
                         return '<span class="syntax-literal">$' . $argKlass . '</span>';
                     } else {
                         return '<span class="syntax-variable">$' . $argKlass . '</span>';
@@ -1137,65 +1154,66 @@
 
             /**
              * = Options =
-             * 
+             *
              * All options are optional, and so is passing in an options item.
              * You don't have to supply any, it's up to you.
-             * 
+             *
              * Note that if 'php_error.force_disable' is true, then this object
              * will try to look like it works, but won't actually do anything.
-             * 
+             *
              * All options can also be passed in from 'php.ini'. You do this
              * by setting it with 'php_error.' prefix. For example:
-             * 
+             *
              *      php_error.catch_ajax_errors = On
              *      php_error.error_reporting_on = E_ALL | E_STRICT
-             * 
+             *
              * Includes:
              *  = Types of errors this will catch =
              *  - catch_ajax_errors         When on, this will inject JS Ajax wrapping code, to allow this to catch any future JSON errors. Defaults to true.
              *  - catch_supressed_errors    The @ supresses errors. If set to true, then they are still reported anyway, but respected when false. Defaults to false.
              *  - catch_class_not_found     When true, loading a class that does not exist will be caught. This defaults to true.
-             * 
+             *
              *  = Error reporting level =
              *  - error_reporting_on        value for when errors are on, defaults to all errors
              *  - error_reporting_off       value for when errors are off, defaults to php.ini's error_reporting.
-             * 
+             *
              *  = Setup Details =
              *  - application_root          When it's working out hte stack trace, this is the root folder of the application, to use as it's base.
              *                              Defaults to the servers root directory.
-             * 
+             *
              *                              A relative path can be given, but lets be honest, an explicit path is the way to guarantee that you
              *                              will get the path you want. My relative might not be the same as your relative.
-             * 
-             *  - snippet_num_lines         The number of lines to display in the code snippet. 
+             *
+             *  - snippet_num_lines         The number of lines to display in the code snippet.
              *                              That includes the line being reported.
-             * 
+             *
              *  - server_name               The name for this server, defaults to "$_SERVER['SERVER_NAME']"
-             * 
+             *
              *  - ignore_folders            This is allows you to highlight non-framework code in a stack trace.
              *                              An array of folders to ignore, when working out the stack trace.
              *                              This is folder prefixes in relation to the application_root, whatever that might be.
              *                              They are only ignored if there is a file found outside of them.
              *                              If you still don't get what this does, don't worry, it's here cos I use it.
-             * 
+             *
              *  - application_folders       Just like ignore, but anything found in these folders takes precedence
              *                              over anything else.
-             * 
+             *
              *  - background_text           The text that appeares in the background. By default this is blank.
              *                              Why? You can replace this with the name of your framework, for extra customization spice.
-             * 
+             *
              *  - html_only                 By default, PHP Error only runs on ajax and HTML pages.
              *                              If this is false, then it will also run when on non-HTML
              *                              pages too, such as replying with images of JavaScript
              *                              from your PHP. Defaults to true.
-             * 
+             *
              * @param options Optional, an array of values to customize this handler.
              * @throws Exception This is raised if given an options that does *not* exist (so you know that option is meaningless).
              */
-            public function __construct( $options=null ) {
+            public function __construct($options=null)
+            {
                 // there can only be one to rule them all
                 global $_php_error_global_handler;
-                if ( $_php_error_global_handler !== null ) {
+                if ($_php_error_global_handler !== null) {
                     $this->lastGlobalErrorHandler = $_php_error_global_handler;
                 } else {
                     $this->lastGlobalErrorHandler = null;
@@ -1209,64 +1227,64 @@
 
                 /*
                  * Deal with the options.
-                 * 
+                 *
                  * They are removed one by one, and any left, will raise an error.
                  */
 
-                $ignoreFolders                  = ErrorHandler::optionsPop( $options, 'ignore_folders'     , null );
-                $appFolders                     = ErrorHandler::optionsPop( $options, 'application_folders', null );
+                $ignoreFolders                  = ErrorHandler::optionsPop($options, 'ignore_folders', null);
+                $appFolders                     = ErrorHandler::optionsPop($options, 'application_folders', null);
 
-                if ( $ignoreFolders !== null ) {
-                    ErrorHandler::setFolders( $this->ignoreFolders, $this->ignoreFoldersLongest, $ignoreFolders );
+                if ($ignoreFolders !== null) {
+                    ErrorHandler::setFolders($this->ignoreFolders, $this->ignoreFoldersLongest, $ignoreFolders);
                 }
-                if ( $appFolders !== null ) {
-                    ErrorHandler::setFolders( $this->applicationFolders, $this->applicationFoldersLongest, $appFolders );
+                if ($appFolders !== null) {
+                    ErrorHandler::setFolders($this->applicationFolders, $this->applicationFoldersLongest, $appFolders);
                 }
 
-                $this->defaultErrorReportingOn  = ErrorHandler::optionsPop( $options, 'error_reporting_on' , -1 );
-                $this->defaultErrorReportingOff = ErrorHandler::optionsPop( $options, 'error_reporting_off', error_reporting() );
+                $this->defaultErrorReportingOn  = ErrorHandler::optionsPop($options, 'error_reporting_on', -1);
+                $this->defaultErrorReportingOff = ErrorHandler::optionsPop($options, 'error_reporting_off', error_reporting());
 
-                $this->applicationRoot          = ErrorHandler::optionsPop( $options, 'application_root'   , $_SERVER['DOCUMENT_ROOT'] );
-                $this->serverName               = ErrorHandler::optionsPop( $options, 'error_reporting_off', $_SERVER['SERVER_NAME']   );
+                $this->applicationRoot          = ErrorHandler::optionsPop($options, 'application_root', $_SERVER['DOCUMENT_ROOT']);
+                $this->serverName               = ErrorHandler::optionsPop($options, 'error_reporting_off', $_SERVER['SERVER_NAME']);
 
                 /*
                  * Relative paths might be given for document root,
                  * so we make it explicit.
                  */
-                $dir = @realpath( $this->applicationRoot );
-                if ( ! is_string($dir) ) {
+                $dir = @realpath($this->applicationRoot);
+                if (! is_string($dir)) {
                     throw new Exception("Document root not found: " . $this->applicationRoot);
                 } else {
-                    $this->applicationRoot =  str_replace( '\\', '/', $dir );
+                    $this->applicationRoot =  str_replace('\\', '/', $dir);
                 }
 
-                $this->catchClassNotFound       = !! ErrorHandler::optionsPop( $options, 'catch_class_not_found' , true  );
-                $this->catchSurpressedErrors    = !! ErrorHandler::optionsPop( $options, 'catch_supressed_errors', false );
-                $this->catchAjaxErrors          = !! ErrorHandler::optionsPop( $options, 'catch_ajax_errors'     , true  );
+                $this->catchClassNotFound       = !! ErrorHandler::optionsPop($options, 'catch_class_not_found', true);
+                $this->catchSurpressedErrors    = !! ErrorHandler::optionsPop($options, 'catch_supressed_errors', false);
+                $this->catchAjaxErrors          = !! ErrorHandler::optionsPop($options, 'catch_ajax_errors', true);
 
-                $this->backgroundText           = ErrorHandler::optionsPop( $options, 'background_text'       , ''    );
-                $this->numLines                 = ErrorHandler::optionsPop( $options, 'snippet_num_lines'     , ErrorHandler::NUM_FILE_LINES        );
-                $this->displayLineNumber        = ErrorHandler::optionsPop( $options, 'display_line_numbers'  , false );
+                $this->backgroundText           = ErrorHandler::optionsPop($options, 'background_text', '');
+                $this->numLines                 = ErrorHandler::optionsPop($options, 'snippet_num_lines', ErrorHandler::NUM_FILE_LINES);
+                $this->displayLineNumber        = ErrorHandler::optionsPop($options, 'display_line_numbers', false);
 
-                $this->htmlOnly                 = !! ErrorHandler::optionsPop( $options, 'html_only', true );
+                $this->htmlOnly                 = !! ErrorHandler::optionsPop($options, 'html_only', true);
 
                 $this->classNotFoundException   = null;
 
-                $wordpress = ErrorHandler::optionsPop( $options, 'wordpress', false );
-                if ( $wordpress ) {
+                $wordpress = ErrorHandler::optionsPop($options, 'wordpress', false);
+                if ($wordpress) {
                     // php doesn't like | in constants and privates, so just set it directly : (
                     $this->defaultErrorReportingOn = E_ERROR | E_WARNING | E_PARSE | E_USER_DEPRECATED & ~E_DEPRECATED & ~E_STRICT;
                 }
 
-                if ( $options ) {
-                    foreach ( $options as $key => $val ) {
-                        throw new InvalidArgumentException( "Unknown option given $key" );
+                if ($options) {
+                    foreach ($options as $key => $val) {
+                        throw new InvalidArgumentException("Unknown option given $key");
                     }
                 }
 
                 $this->isAjax =
-                        isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) &&
-                        ( $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest' );
+                        isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                        ($_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest');
 
                 $this->isBufferSetup = false;
                 $this->bufferOutputStr = '';
@@ -1284,44 +1302,48 @@
             /**
              * @return true if this is currently on, false if not.
              */
-            public function isOn() {
+            public function isOn()
+            {
                 return $this->isOn;
             }
 
             /**
              * @return If this is off, this returns true, otherwise false.
              */
-            public function isOff() {
+            public function isOff()
+            {
                 return !$this->isOn;
             }
 
             /**
              * Turns error reporting on.
-             * 
+             *
              * This will use the strictest error reporting available, or the
              * level you pass in when creating this using the 'error_reporting_on'
              * option.
-             * 
+             *
              * @return This error reporting handler, for method chaining.
              */
-            public function turnOn() {
+            public function turnOn()
+            {
                 $this->propagateTurnOff();
-                $this->setEnabled( true );
+                $this->setEnabled(true);
 
                 return $this;
             }
 
             /**
              * Turns error reporting off.
-             * 
+             *
              * This will use the 'php.ini' setting for the error_reporting level,
              * or one you have passed in if you used the 'error_reporting_off'
              * option when creating this.
-             * 
+             *
              * @return This error reporting handler, for method chaining.
              */
-            public function turnOff() {
-                $this->setEnabled( false );
+            public function turnOff()
+            {
+                $this->setEnabled(false);
 
                 return $this;
             }
@@ -1330,28 +1352,29 @@
              * Allows you to run a callback with strict errors turned off.
              * Standard errors still apply, but this will use the default
              * error and exception handlers.
-             * 
+             *
              * This is useful for when loading libraries which do not
              * adhere to strict errors, such as Wordpress.
-             * 
+             *
              * To use:
-             * 
+             *
              *      withoutErrors( function() {
              *          // unsafe code here
              *      });
-             * 
+             *
              * This will use the error_reporting value for when this is
              * turned off.
-             * 
+             *
              * @param callback A PHP function to call.
              * @return The result of calling the callback.
              */
-            public function withoutErrors( $callback ) {
-                if ( ! is_callable($callback) ) {
-                    throw new Exception( "non callable callback given" );
+            public function withoutErrors($callback)
+            {
+                if (! is_callable($callback)) {
+                    throw new Exception("non callable callback given");
                 }
 
-                if ( $this->isOn() ) {
+                if ($this->isOn()) {
                     $this->turnOff();
                     $result = $callback();
                     $this->turnOn();
@@ -1363,16 +1386,17 @@
             }
             
             /**
-             * This is the shutdown function, which should *only* be called 
+             * This is the shutdown function, which should *only* be called
              * via 'register_shutdown_function'.
-             * 
+             *
              * It's exposed because it has to be exposed.
              */
-            public function __onShutdown() {
+            public function __onShutdown()
+            {
                 global $_php_error_is_ini_enabled;
                 
-                if ( $_php_error_is_ini_enabled ) {
-                    if ( $this->isOn() ) {
+                if ($_php_error_is_ini_enabled) {
+                    if ($this->isOn()) {
                         $error = error_get_last();
 
                         // fatal and syntax errors
@@ -1383,7 +1407,7 @@
                                         $error['type'] === 64
                                 )
                         ) {
-                            $this->reportError( $error['type'], $error['message'], $error['line'], $error['file'] );
+                            $this->reportError($error['type'], $error['message'], $error['line'], $error['file']);
                         } else {
                             $this->endBuffer();
                         }
@@ -1399,8 +1423,9 @@
              * --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
              */
 
-            private function propagateTurnOff() {
-                if ( $this->lastGlobalErrorHandler !== null ) {
+            private function propagateTurnOff()
+            {
+                if ($this->lastGlobalErrorHandler !== null) {
                     $this->lastGlobalErrorHandler->turnOff();
                     $this->lastGlobalErrorHandler->propagateTurnOff();
                     $this->lastGlobalErrorHandler = null;
@@ -1410,25 +1435,26 @@
             /**
              * This is intended to be used closely with 'onShutdown'.
              * It ensures that output buffering is turned on.
-             * 
+             *
              * Why? The user may output content, and *then* hit an error.
              * We cannot replace the page if this happens,
              * because they have already outputted information.
-             * 
+             *
              * So we buffer the page, and then output at the end of the page,
              * or when an error strikes.
              */
-            private function startBuffer() {
+            private function startBuffer()
+            {
                 global $_php_error_is_ini_enabled;
                 
-                if ( $_php_error_is_ini_enabled && !$this->isBufferSetup ) {
+                if ($_php_error_is_ini_enabled && !$this->isBufferSetup) {
                     $this->isBufferSetup = true;
 
-                    ini_set( 'implicit_flush', false );
-                    ob_implicit_flush( false );
+                    ini_set('implicit_flush', false);
+                    ob_implicit_flush(false);
 
-                    if ( ! @ini_get('output_buffering') ) {
-                        @ini_set( 'output_buffering', 'on' );
+                    if (! @ini_get('output_buffering')) {
+                        @ini_set('output_buffering', 'on');
                     }
 
                     $output = '';
@@ -1437,8 +1463,8 @@
                     $this->bufferOutputStr  = &$output;
                     $this->bufferOutput = &$bufferOutput;
 
-                    ob_start( function($string) use (&$output, &$bufferOutput) {
-                        if ( $bufferOutput ) {
+                    ob_start(function ($string) use (&$output, &$bufferOutput) {
+                        if ($bufferOutput) {
                             $output .= $string;
                             return '';
                         } else {
@@ -1449,7 +1475,7 @@
                     });
 
                     $self = $this;
-                    register_shutdown_function( function() use ( $self ) {
+                    register_shutdown_function(function () use ($self) {
                         $self->__onShutdown();
                     });
                 }
@@ -1458,11 +1484,12 @@
             /**
              * Turns off buffering, and discards anything buffered
              * so far.
-             * 
+             *
              * This will return what has been buffered incase you
              * do want it. However otherwise, it will be lost.
              */
-            private function discardBuffer() {
+            private function discardBuffer()
+            {
                 $str = $this->bufferOutputStr;
 
                 $this->bufferOutputStr = '';
@@ -1474,10 +1501,11 @@
             /**
              * Flushes the internal buffer,
              * outputting what is left.
-             * 
+             *
              * @param append Optional, extra content to append onto the output buffer.
              */
-            private function flushBuffer() {
+            private function flushBuffer()
+            {
                 $temp = $this->bufferOutputStr;
                 $this->bufferOutputStr = '';
 
@@ -1488,14 +1516,15 @@
              * This will finish buffering, and output the page.
              * It also appends the magic JS onto the beginning of the page,
              * if enabled, to allow working with Ajax.
-             * 
+             *
              * Note that if PHP Error has been disabled in the php.ini file,
              * or through some other option, such as running from the command line,
              * then this will do nothing (as no buffering will take place).
              */
-            public function endBuffer() {
-                if ( $this->isBufferSetup ) {
-                    if ( 
+            public function endBuffer()
+            {
+                if ($this->isBufferSetup) {
+                    if (
                             !$this->isAjax &&
                              $this->catchAjaxErrors &&
                             (!$this->htmlOnly || !ErrorHandler::isNonPHPRequest())
@@ -1506,13 +1535,13 @@
                         $wasGZHandler = false;
 
                         $this->bufferOutput = true;
-                        for ( $i = count($handlers)-1; $i >= 0; $i-- ) {
+                        for ($i = count($handlers)-1; $i >= 0; $i--) {
                             $handler = $handlers[$i];
 
-                            if ( $handler === 'ob_gzhandler' ) {
+                            if ($handler === 'ob_gzhandler') {
                                 $wasGZHandler = true;
                                 ob_end_clean();
-                            } else if ( $handler === 'default output handler' ) {
+                            } elseif ($handler === 'default output handler') {
                                 ob_end_clean();
                             } else {
                                 ob_end_flush();
@@ -1521,22 +1550,22 @@
 
                         $content = $this->discardBuffer();
 
-                        if ( $wasGZHandler ) {
+                        if ($wasGZHandler) {
                             ob_start('ob_gzhandler');
                         } else {
                             ob_start();
                         }
            
-                        $js = $this->getContent( 'displayJSInjection' );
-                        $js = JSMin::minify( $js );
+                        $js = $this->getContent('displayJSInjection');
+                        $js = JSMin::minify($js);
 
                         // attemp to inject the script into the HTML, after the doctype
                         $matches = array();
-                        preg_match( ErrorHandler::REGEX_DOCTYPE, $content, $matches );
+                        preg_match(ErrorHandler::REGEX_DOCTYPE, $content, $matches);
 
-                        if ( $matches ) {
+                        if ($matches) {
                             $doctype = $matches[0];
-                            $content = preg_replace( ErrorHandler::REGEX_DOCTYPE, "$doctype $js", $content );
+                            $content = preg_replace(ErrorHandler::REGEX_DOCTYPE, "$doctype $js", $content);
                         } else {
                             echo $js;
                         }
@@ -1549,11 +1578,12 @@
             /**
              * Calls the given method on this object,
              * captures it's output, and then returns it.
-             * 
+             *
              * @param method The name of the method to call.
              * @return All of the text outputted during the method call.
              */
-            private function getContent( $method ) {
+            private function getContent($method)
+            {
                 ob_start();
                 $this->$method();
                 $content = ob_get_contents();
@@ -1562,7 +1592,8 @@
                 return $content;
             }
 
-            private function isApplicationFolder( $file ) {
+            private function isApplicationFolder($file)
+            {
                 return ErrorHandler::isFolderType(
                         $this->applicationFolders,
                         $this->applicationFoldersLongest,
@@ -1570,7 +1601,8 @@
                 );
             }
 
-            private function isIgnoreFolder( $file ) {
+            private function isIgnoreFolder($file)
+            {
                 return ErrorHandler::isFolderType(
                         $this->ignoreFolders,
                         $this->ignoreFoldersLongest,
@@ -1578,17 +1610,18 @@
                 );
             }
 
-            private function getFolderType( $root, $file ) {
-                $testFile = $this->removeRootPath( $root, $file );
+            private function getFolderType($root, $file)
+            {
+                $testFile = $this->removeRootPath($root, $file);
 
                 // it's this file : (
-                if ( $file === __FILE__ ) {
+                if ($file === __FILE__) {
                     $type = ErrorHandler::FILE_TYPE_IGNORE;
-                } else if ( strpos($testFile, '/') === false ) {
+                } elseif (strpos($testFile, '/') === false) {
                     $type = ErrorHandler::FILE_TYPE_ROOT;
-                } else if ( $this->isApplicationFolder($testFile) ) {
+                } elseif ($this->isApplicationFolder($testFile)) {
                     $type = ErrorHandler::FILE_TYPE_APPLICATION;
-                } else if ( $this->isIgnoreFolder($testFile) ) {
+                } elseif ($this->isIgnoreFolder($testFile)) {
                     $type = ErrorHandler::FILE_TYPE_IGNORE;
                 } else {
                     $type = false;
@@ -1599,30 +1632,31 @@
 
             /**
              * Finds the file named, and returns it's contents in an array.
-             * 
+             *
              * It's essentially the same as 'file_get_contents'. However
              * this will add caching at this PHP layer, avoiding lots of
              * duplicate calls.
-             * 
+             *
              * It also splits the file into an array of lines, and makes
              * it html safe.
-             * 
+             *
              * @param path The file to get the contents of.
              * @return The file we are after, as an array of lines.
              */
-            private function getFileContents( $path ) {
-                if ( isset($this->cachedFiles[$path]) ) {
+            private function getFileContents($path)
+            {
+                if (isset($this->cachedFiles[$path])) {
                     return $this->cachedFiles[$path];
                 } else {
-                    $contents = @file_get_contents( $path );
+                    $contents = @file_get_contents($path);
 
-                    if ( $contents ) {
+                    if ($contents) {
                         $contents = explode(
                                 "\n",
                                 preg_replace(
                                         '/(\r\n)|(\n\r)|\r/',
                                         "\n",
-                                        str_replace( "\t", '    ', $contents )
+                                        str_replace("\t", '    ', $contents)
                                 )
                         );
 
@@ -1638,22 +1672,23 @@
             /**
              * Reads out the code from the section of the line,
              * which is at fault.
-             * 
+             *
              * The array is in a mapping of: array( line-number => line )
-             * 
+             *
              * If something goes wrong, then null is returned.
              */
-            private function readCodeFile( $errFile, $errLine ) {
+            private function readCodeFile($errFile, $errLine)
+            {
                 try {
-                    $lines = $this->getFileContents( $errFile );
+                    $lines = $this->getFileContents($errFile);
 
-                    if ( $lines ) {
+                    if ($lines) {
                         $numLines = $this->numLines;
 
-                        $searchUp   = ceil( $numLines*0.75 );
+                        $searchUp   = ceil($numLines*0.75);
                         $searchDown = $numLines - $searchUp;
                         
-                        $countLines = count( $lines );
+                        $countLines = count($lines);
 
                         /*
                          * Search around the errLine.
@@ -1666,66 +1701,66 @@
                          * we go down as far as we can,
                          * then work up the search area.
                          */
-                        if ( $errLine+$searchDown > $countLines ) {
-                            $minLine = max( 0, $countLines-$numLines );
+                        if ($errLine+$searchDown > $countLines) {
+                            $minLine = max(0, $countLines-$numLines);
                             $maxLine = $countLines;
                         /*
                          * Go up as far as we can, up to half the search area.
                          * Then stretch down the whole search area.
                          */
                         } else {
-                            $minLine = max( 0, $errLine-$searchUp );
-                            $maxLine = min( $minLine+$numLines, count($lines) );
+                            $minLine = max(0, $errLine-$searchUp);
+                            $maxLine = min($minLine+$numLines, count($lines));
                         }
 
-                        $fileLines = array_splice( $lines, $minLine, $maxLine-$minLine );
+                        $fileLines = array_splice($lines, $minLine, $maxLine-$minLine);
 
                         $stripSize = -1;
-                        foreach ( $fileLines as $i => $line ) {
-                            $newLine = ltrim( $line, ' ' );
+                        foreach ($fileLines as $i => $line) {
+                            $newLine = ltrim($line, ' ');
 
-                            if ( strlen($newLine) > 0 ) {
+                            if (strlen($newLine) > 0) {
                                 $numSpaces = strlen($line) - strlen($newLine);
 
-                                if ( $stripSize === -1 ) {
+                                if ($stripSize === -1) {
                                     $stripSize = $numSpaces;
                                 } else {
-                                    $stripSize = min( $stripSize, $numSpaces );
+                                    $stripSize = min($stripSize, $numSpaces);
                                 }
                             } else {
                                 $fileLines[$i] = $newLine;
                             }
                         }
-                        if ( $stripSize > 0 ) {
+                        if ($stripSize > 0) {
                             /*
                              * It's pretty common that PHP code is not flush with the left hand edge,
                              * so subtract 4 spaces, if we can,
                              * to account for this.
                              */
-                            if ( $stripSize > 4 ) {
+                            if ($stripSize > 4) {
                                 $stripSize -= 4;
                             }
 
-                            foreach ( $fileLines as $i => $line ) {
-                                if ( strlen($line) > $stripSize ) {
-                                    $fileLines[$i] = substr( $line, $stripSize );
+                            foreach ($fileLines as $i => $line) {
+                                if (strlen($line) > $stripSize) {
+                                    $fileLines[$i] = substr($line, $stripSize);
                                 }
                             }
                         }
 
-                        $fileLines = join( "\n", $fileLines );
-                        $fileLines = ErrorHandler::syntaxHighlight( $fileLines );
-                        $fileLines = explode( "\n", $fileLines );
+                        $fileLines = join("\n", $fileLines);
+                        $fileLines = ErrorHandler::syntaxHighlight($fileLines);
+                        $fileLines = explode("\n", $fileLines);
 
                         $lines = array();
-                        for ( $i = 0; $i < count($fileLines); $i++ ) {
+                        for ($i = 0; $i < count($fileLines); $i++) {
                             // +1 is because line numbers start at 1, whilst arrays start at 0
                             $lines[ $i+$minLine+1 ] = $fileLines[$i];
                         }
                     }
 
                     return $lines;
-                } catch ( Exception $ex ) {
+                } catch (Exception $ex) {
                     return null;
                 }
 
@@ -1735,25 +1770,26 @@
             /**
              * Attempts to remove the root path from the path given.
              * If the path can't be removed, then the original path is returned.
-             * 
+             *
              * For example if root is 'C:/users/projects/my_site',
              * and the file is 'C:/users/projects/my_site/index.php',
              * then the root is removed, and we are left with just 'index.php'.
-             * 
+             *
              * This is to remove line noise; you don't need to be told the
              * 'C:/whatever' bit 20 times.
-             * 
+             *
              * @param root The root path to remove.
              * @param path The file we are removing the root section from.
              */
-            private function removeRootPath( $root, $path ) {
-                $filePath = str_replace( '\\', '/', $path );
+            private function removeRootPath($root, $path)
+            {
+                $filePath = str_replace('\\', '/', $path);
 
                 if (
                         strpos($filePath, $root) === 0 &&
                         strlen($root) < strlen($filePath)
                 ) {
-                    return substr($filePath, strlen($root)+1 );
+                    return substr($filePath, strlen($root)+1);
                 } else {
                     return $filePath;
                 }
@@ -1761,28 +1797,29 @@
 
             /**
              * Parses, and alters, the errLine, errFile and message given.
-             * 
+             *
              * This includes adding syntax highlighting, removing duplicate
              * information we already have, and making the error easier to
              * read.
              */
-            private function improveErrorMessage( $ex, $code, $message, $errLine, $errFile, $root, &$stackTrace ) {
+            private function improveErrorMessage($ex, $code, $message, $errLine, $errFile, $root, &$stackTrace)
+            {
                 // change these to change where the source file is come from
                 $srcErrFile = $errFile;
                 $srcErrLine = $errLine;
                 $altInfo = null;
                 $stackSearchI = 0;
 
-                $skipStackFirst = function( &$stackTrace ) {
+                $skipStackFirst = function (&$stackTrace) {
                     $skipFirst = true;
 
-                    foreach ( $stackTrace as $i => $trace ) {
-                         if ( $skipFirst ) {
-                              $skipFirst = false;
-                         } else {
-                              if ( $trace && isset($trace['file']) && isset($trace['line']) ) {
-                                   return array( $trace['file'], $trace['line'], $i );
-                              }
+                    foreach ($stackTrace as $i => $trace) {
+                        if ($skipFirst) {
+                            $skipFirst = false;
+                        } else {
+                            if ($trace && isset($trace['file']) && isset($trace['line'])) {
+                                return array( $trace['file'], $trace['line'], $i );
+                            }
                         }
                     }
 
@@ -1791,55 +1828,55 @@
 
                 /*
                  * This is for calling a function that doesn't exist.
-                 * 
+                 *
                  * The message contains a long description of where this takes
                  * place, even though we are already told this through line and
                  * file info. So we cut it out.
                  */
-                if ( $code === 1 ) {
+                if ($code === 1) {
                     if (
-                            ( strpos($message, " undefined method ") !== false ) ||
-                            ( strpos($message, " undefined function ") !== false )
+                            (strpos($message, " undefined method ") !== false) ||
+                            (strpos($message, " undefined function ") !== false)
                     ) {
                         $matches = array();
-                        preg_match( '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((->|::)[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?\\(\\)$/', $message, $matches );
+                        preg_match('/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((->|::)[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?\\(\\)$/', $message, $matches);
 
                         /*
                          * undefined function or method call
                          */
-                        if ( $matches ) {
-                            list( $className, $type, $functionName ) = ErrorHandler::splitFunction( $matches[0] );
+                        if ($matches) {
+                            list($className, $type, $functionName) = ErrorHandler::splitFunction($matches[0]);
 
-                            if ( $stackTrace && isset($stackTrace[1]) && $stackTrace[1]['args'] ) {
-                                $numArgs = count( $stackTrace[1]['args'] );
+                            if ($stackTrace && isset($stackTrace[1]) && $stackTrace[1]['args']) {
+                                $numArgs = count($stackTrace[1]['args']);
 
-                                for ( $i = 0; $i < $numArgs; $i++ ) {
-                                    $args[]= ErrorHandler::newArgument( "_" );
+                                for ($i = 0; $i < $numArgs; $i++) {
+                                    $args[]= ErrorHandler::newArgument("_");
                                 }
                             }
 
                             $message = preg_replace(
                                     '/\b[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((->|::)[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)?\\(\\)$/',
-                                    ErrorHandler::syntaxHighlightFunction( $className, $type, $functionName, $args ),
+                                    ErrorHandler::syntaxHighlightFunction($className, $type, $functionName, $args),
                                     $message
                             );
                         }
-                    } else if ( $message === 'Using $this when not in object context' ) {
+                    } elseif ($message === 'Using $this when not in object context') {
                         $message = 'Using <span class="syntax-variable">$this</span> outside object context';
                     /*
                      * Class not found error.
                      */
-                    } else if (
+                    } elseif (
                         strpos($message, "Class ") !== false &&
                         strpos($message, "not found") !== false
                     ) {
                         $matches = array();
-                        preg_match( '/\'(\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)+\'/', $message, $matches );
+                        preg_match('/\'(\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)+\'/', $message, $matches);
 
-                        if ( count($matches) > 0 ) {
+                        if (count($matches) > 0) {
                             // lose the 'quotes'
                             $className = $matches[0];
-                            $className = substr( $className, 1, strlen($className)-2 );
+                            $className = substr($className, 1, strlen($className)-2);
 
                             $message = preg_replace(
                                     '/\'(\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*((\\\\)?[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*)+\'/',
@@ -1848,86 +1885,86 @@
                             );
                         }
                     }
-                } else if ( $code === 2 ) {
-                    if ( strpos($message, "Missing argument ") === 0 ) {
-                        $message = preg_replace( '/, called in .*$/', '', $message );
+                } elseif ($code === 2) {
+                    if (strpos($message, "Missing argument ") === 0) {
+                        $message = preg_replace('/, called in .*$/', '', $message);
 
                         $matches = array();
-                        preg_match( ErrorHandler::REGEX_METHOD_OR_FUNCTION_END, $message, $matches );
+                        preg_match(ErrorHandler::REGEX_METHOD_OR_FUNCTION_END, $message, $matches);
 
-                        if ( $matches ) {
+                        if ($matches) {
                             $argumentMathces = array();
-                            preg_match( '/^Missing argument ([0-9]+)/', $message, $argumentMathces );
+                            preg_match('/^Missing argument ([0-9]+)/', $message, $argumentMathces);
                             $highlightArg = count($argumentMathces) === 2 ?
                                     (((int) $argumentMathces[1])-1) :
                                     null ;
 
                             $numHighlighted = 0;
-                            $altInfo = ErrorHandler::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg, $numHighlighted );
+                            $altInfo = ErrorHandler::syntaxHighlightFunctionMatch($matches[0], $stackTrace, $highlightArg, $numHighlighted);
 
-                            if ( $numHighlighted > 0 ) {
-                                $message = preg_replace( '/^Missing argument ([0-9]+)/', 'Missing arguments ', $message );
+                            if ($numHighlighted > 0) {
+                                $message = preg_replace('/^Missing argument ([0-9]+)/', 'Missing arguments ', $message);
                             }
 
-                            if ( $altInfo ) {
-                                $message = preg_replace( ErrorHandler::REGEX_METHOD_OR_FUNCTION_END, $altInfo, $message );
+                            if ($altInfo) {
+                                $message = preg_replace(ErrorHandler::REGEX_METHOD_OR_FUNCTION_END, $altInfo, $message);
 
-                                list( $srcErrFile, $srcErrLine, $stackSearchI ) = $skipStackFirst( $stackTrace );
+                                list($srcErrFile, $srcErrLine, $stackSearchI) = $skipStackFirst($stackTrace);
                             }
                         }
-                    } else if (
+                    } elseif (
                             strpos($message, 'require(') === 0 ||
                             strpos($message, 'include(') === 0
                     ) {
-                        $endI  = strpos( $message, '):' );
+                        $endI  = strpos($message, '):');
 
-                        if ( $endI ) {
+                        if ($endI) {
                             // include( is the same length
                             $requireLen = strlen('require(');
 
                             /*
                              * +2 to include the ): at the end of the string
                              */
-                            $postMessage = substr( $message, $endI+2 );
-                            $postMessage = str_replace( 'failed to open stream: No ', 'no ', $postMessage );
-                            $message = substr_replace( $message, $postMessage, $endI+2 );
+                            $postMessage = substr($message, $endI+2);
+                            $postMessage = str_replace('failed to open stream: No ', 'no ', $postMessage);
+                            $message = substr_replace($message, $postMessage, $endI+2);
 
                             /*
                              * If this string is in there, and where we think it should be,
                              * swap it with a shorter message.
                              */
                             $replaceBit = 'failed to open stream: No ';
-                            if ( strpos($message, $replaceBit) === $endI+2 ) {
-                                $message  = substr_replace( $message, 'no ', $endI+2, strlen($replaceBit) );
+                            if (strpos($message, $replaceBit) === $endI+2) {
+                                $message  = substr_replace($message, 'no ', $endI+2, strlen($replaceBit));
                             }
 
                             /*
                              * Now put the string highlighting in there.
                              */
-                            $match = substr( $message, $requireLen, $endI-$requireLen );
+                            $match = substr($message, $requireLen, $endI-$requireLen);
                             $newString = "<span class='syntax-string'>'$match'</span>),";
-                            $message  = substr_replace( $message, $newString, $requireLen, ($endI-$requireLen)+2 );
+                            $message  = substr_replace($message, $newString, $requireLen, ($endI-$requireLen)+2);
                         }
                     }
                 /*
                  * Unexpected symbol errors.
                  * For example 'unexpected T_OBJECT_OPERATOR'.
-                 * 
+                 *
                  * This swaps the 'T_WHATEVER' for the symbolic representation.
                  */
-                } else if ( $code === 4 ) {
-                    if ( $message === "syntax error, unexpected T_ENCAPSED_AND_WHITESPACE" ) {
+                } elseif ($code === 4) {
+                    if ($message === "syntax error, unexpected T_ENCAPSED_AND_WHITESPACE") {
                         $message = "syntax error, string is not closed";
                     } else {
                         $semiColonError = false;
-                        if ( strpos($message, 'syntax error,') === 0 && $errLine > 2 ) {
-                            $lines = ErrorHandler::getFileContents( $errFile );
+                        if (strpos($message, 'syntax error,') === 0 && $errLine > 2) {
+                            $lines = ErrorHandler::getFileContents($errFile);
                             
                             $line = $lines[$errLine-1];
-                            if ( preg_match( ErrorHandler::REGEX_MISSING_SEMI_COLON_FOLLOWING_LINE, $line ) !== 0 ) {
-                                $content = rtrim( join( "\n", array_slice($lines, 0, $errLine-1) ) );
+                            if (preg_match(ErrorHandler::REGEX_MISSING_SEMI_COLON_FOLLOWING_LINE, $line) !== 0) {
+                                $content = rtrim(join("\n", array_slice($lines, 0, $errLine-1)));
 
-                                if ( strrpos($content, ';') !== strlen($content)-1 ) {
+                                if (strrpos($content, ';') !== strlen($content)-1) {
                                     $message = "Missing semi-colon";
                                     $errLine--;
                                     $srcErrLine = $errLine;
@@ -1936,86 +1973,86 @@
                             }
                         }
 
-                        if ( $semiColonError ) {
+                        if ($semiColonError) {
                             $matches = array();
-                            $num = preg_match( '/\bunexpected ([A-Z_]+|\\$end)\b/', $message, $matches );
+                            $num = preg_match('/\bunexpected ([A-Z_]+|\\$end)\b/', $message, $matches);
 
-                            if ( $num > 0 ) {
+                            if ($num > 0) {
                                 $match = $matches[0];
-                                $newSymbol = ErrorHandler::phpSymbolToDescription( str_replace('unexpected ', '', $match) );
+                                $newSymbol = ErrorHandler::phpSymbolToDescription(str_replace('unexpected ', '', $match));
 
-                                $message = str_replace( $match, "unexpected $newSymbol", $message );
+                                $message = str_replace($match, "unexpected $newSymbol", $message);
                             }
 
                             $matches = array();
-                            $num = preg_match( '/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches );
+                            $num = preg_match('/, expecting ([A-Z_]+|\\$end)( or ([A-Z_]+|\\$end))*/', $message, $matches);
 
-                            if ( $num > 0 ) {
+                            if ($num > 0) {
                                 $match = $matches[0];
-                                $newMatch = str_replace( ", expecting ", '', $match );
-                                $symbols = explode( ' or ', $newMatch );
-                                foreach ( $symbols as $i => $sym ) {
-                                    $symbols[$i] = ErrorHandler::phpSymbolToDescription( $sym );
+                                $newMatch = str_replace(", expecting ", '', $match);
+                                $symbols = explode(' or ', $newMatch);
+                                foreach ($symbols as $i => $sym) {
+                                    $symbols[$i] = ErrorHandler::phpSymbolToDescription($sym);
                                 }
-                                $newMatch = join( ', or ', $symbols );
+                                $newMatch = join(', or ', $symbols);
 
-                                $message = str_replace( $match, ", expecting $newMatch", $message );
+                                $message = str_replace($match, ", expecting $newMatch", $message);
                             }
                         }
                     }
                 /**
                  * Undefined Variable, add syntax highlighting and make variable from 'foo' too '$foo'.
                  */
-                } else if ( $code === 8 ) {
+                } elseif ($code === 8) {
                     if (
                         strpos($message, "Undefined variable:") !== false
                     ) {
                         $matches = array();
-                        preg_match( ErrorHandler::REGEX_VARIABLE, $message, $matches );
+                        preg_match(ErrorHandler::REGEX_VARIABLE, $message, $matches);
 
-                        if ( count($matches) > 0 ) {
+                        if (count($matches) > 0) {
                             $message = 'Undefined variable <span class="syntax-variable">$' . $matches[0] . '</span>' ;
                         }
                     }
                 /**
                  * Invalid type given.
                  */
-                } else if ( $code === 4096 ) {
-                    if ( strpos($message, 'must be an ') ) {
-                        $message = preg_replace( '/, called in .*$/', '', $message );
+                } elseif ($code === 4096) {
+                    if (strpos($message, 'must be an ')) {
+                        $message = preg_replace('/, called in .*$/', '', $message);
 
                         $matches = array();
-                        preg_match( ErrorHandler::REGEX_METHOD_OR_FUNCTION, $message, $matches );
+                        preg_match(ErrorHandler::REGEX_METHOD_OR_FUNCTION, $message, $matches);
 
-                        if ( $matches ) {
+                        if ($matches) {
                             $argumentMathces = array();
-                            preg_match( '/^Argument ([0-9]+)/', $message, $argumentMathces );
+                            preg_match('/^Argument ([0-9]+)/', $message, $argumentMathces);
                             $highlightArg = count($argumentMathces) === 2 ?
                                     (((int) $argumentMathces[1])-1) :
                                     null ;
 
-                            $fun = ErrorHandler::syntaxHighlightFunctionMatch( $matches[0], $stackTrace, $highlightArg );
+                            $fun = ErrorHandler::syntaxHighlightFunctionMatch($matches[0], $stackTrace, $highlightArg);
 
-                            if ( $fun ) {
-                                $message = str_replace( 'passed to ', 'calling ', $message );
-                                $message = preg_replace( ErrorHandler::REGEX_METHOD_OR_FUNCTION, $fun, $message );
+                            if ($fun) {
+                                $message = str_replace('passed to ', 'calling ', $message);
+                                $message = preg_replace(ErrorHandler::REGEX_METHOD_OR_FUNCTION, $fun, $message);
                                 $prioritizeCaller = true;
 
                                 /*
                                  * scalars not supported.
                                  */
                                 $scalarType = null;
-                                if ( ! ErrorHandler::$IS_SCALAR_TYPE_HINTING_SUPPORTED ) {
-                                    foreach ( ErrorHandler::$SCALAR_TYPES as $scalar ) {
-                                        if ( stripos($message, "must be an instance of $scalar,") !== false ) {
+                                if (! ErrorHandler::$IS_SCALAR_TYPE_HINTING_SUPPORTED) {
+                                    foreach (ErrorHandler::$SCALAR_TYPES as $scalar) {
+                                        if (stripos($message, "must be an instance of $scalar,") !== false) {
                                             $scalarType = $scalar;
                                             break;
                                         }
                                     }
                                 }
 
-                                if ( $scalarType !== null ) {
-                                    $message = preg_replace( '/^Argument [0-9]+ calling /', 'Incorrect type hinting for ', $message );
+                                if ($scalarType !== null) {
+                                    $message = preg_replace('/^Argument [0-9]+ calling /', 'Incorrect type hinting for ', $message);
                                     $message = preg_replace(
                                             '/ must be an instance of ' . ErrorHandler::REGEX_PHP_IDENTIFIER . '\b.*$/',
                                             ", ${scalarType} is not supported",
@@ -2024,45 +2061,45 @@
 
                                     $prioritizeCaller = false;
                                 } else {
-                                    $message = preg_replace( '/ must be an (instance of )?' . ErrorHandler::REGEX_PHP_IDENTIFIER . '\b/', '', $message );
+                                    $message = preg_replace('/ must be an (instance of )?' . ErrorHandler::REGEX_PHP_IDENTIFIER . '\b/', '', $message);
 
-                                    if ( preg_match('/, none given$/', $message) ) {
-                                        $message = preg_replace( '/^Argument /', 'Missing argument ', $message );
-                                        $message = preg_replace( '/, none given$/', '', $message );
+                                    if (preg_match('/, none given$/', $message)) {
+                                        $message = preg_replace('/^Argument /', 'Missing argument ', $message);
+                                        $message = preg_replace('/, none given$/', '', $message);
                                     } else {
-                                        $message = preg_replace( '/^Argument /', 'Incorrect argument ', $message );
+                                        $message = preg_replace('/^Argument /', 'Incorrect argument ', $message);
                                     }
                                 }
 
-                                if ( $prioritizeCaller ) {
-                                    list( $srcErrFile, $srcErrLine, $stackSearchI ) = $skipStackFirst( $stackTrace );
+                                if ($prioritizeCaller) {
+                                    list($srcErrFile, $srcErrLine, $stackSearchI) = $skipStackFirst($stackTrace);
                                 }
                             }
                         }
                     }
                 }
 
-                if ( $stackTrace !== null ) {
-                    $isEmpty = count( $stackTrace ) === 0 ;
+                if ($stackTrace !== null) {
+                    $isEmpty = count($stackTrace) === 0 ;
 
-                    if ( $isEmpty ) {
-                        array_unshift( $stackTrace, array(
+                    if ($isEmpty) {
+                        array_unshift($stackTrace, array(
                                 'line' => $errLine,
                                 'file' => $errFile
-                        ) );
-                    } else if (
+                        ));
+                    } elseif (
                             count($stackTrace) > 0 && (
                                     (! isset($stackTrace[0]['line'])) ||
                                     ($stackTrace[0]['line'] !== $errLine)
                             )
                     ) {
-                        array_unshift( $stackTrace, array(
+                        array_unshift($stackTrace, array(
                                 'line' => $errLine,
                                 'file' => $errFile
-                        ) );
+                        ));
                     }
 
-                    if ( $stackTrace && !$isEmpty ) {
+                    if ($stackTrace && !$isEmpty) {
                         $ignoreCommons = false;
                         $len = count($stackTrace);
 
@@ -2070,27 +2107,27 @@
                          * The code above can prioritize a location in the stack trace,
                          * this is 'stackSearchI'. So we should start our search from there,
                          * and work down the stack.
-                         * 
+                         *
                          * This is built in a way so that when it reaches the end, it'll loop
                          * back round to the beginning, and check the traces we didn't check
                          * last time.
-                         * 
+                         *
                          * If stackSearchI was not altered, then it just searches from top
                          * through to the bottom.
                          */
-                        for ( $i = $stackSearchI; $i < $stackSearchI+$len; $i++ ) {
+                        for ($i = $stackSearchI; $i < $stackSearchI+$len; $i++) {
                             $trace = &$stackTrace[ $i % $len ];
 
-                            if ( isset($trace['file']) && isset($trace['line']) ) {
-                                list( $type, $_ ) = $this->getFolderType( $root, $trace['file'] );
+                            if (isset($trace['file']) && isset($trace['line'])) {
+                                list($type, $_) = $this->getFolderType($root, $trace['file']);
 
-                                if ( $type !== ErrorHandler::FILE_TYPE_IGNORE ) {
-                                    if ( $type === ErrorHandler::FILE_TYPE_APPLICATION ) {
+                                if ($type !== ErrorHandler::FILE_TYPE_IGNORE) {
+                                    if ($type === ErrorHandler::FILE_TYPE_APPLICATION) {
                                         $srcErrLine = $trace['line'];
                                         $srcErrFile = $trace['file'];
 
                                         break;
-                                    } else if ( ! $ignoreCommons ) {
+                                    } elseif (! $ignoreCommons) {
                                         $srcErrLine = $trace['line'];
                                         $srcErrFile = $trace['file'];
 
@@ -2107,15 +2144,16 @@
 
             /**
              * Parses the stack trace, and makes it look pretty.
-             * 
+             *
              * This includes adding in the syntax highlighting,
              * highlighting the colours for the files,
              * and padding with whitespace.
              *
              * If stackTrace is null, then null is returned.
              */
-            private function parseStackTrace( $code, $message, $errLine, $errFile, &$stackTrace, $root, $altInfo=null ) {
-                if ( $stackTrace !== null ) {
+            private function parseStackTrace($code, $message, $errLine, $errFile, &$stackTrace, $root, $altInfo=null)
+            {
+                if ($stackTrace !== null) {
                     /*
                      * For whitespace padding.
                      */
@@ -2123,23 +2161,23 @@
                     $fileLen = 0;
 
                     // parse the stack trace, and remove the long urls
-                    foreach ( $stackTrace as $i => $trace ) {
-                        if ( $trace ) {
-                            if ( isset($trace['line'] ) ) {
-                                $lineLen = max( $lineLen, strlen($trace['line']) );
+                    foreach ($stackTrace as $i => $trace) {
+                        if ($trace) {
+                            if (isset($trace['line'])) {
+                                $lineLen = max($lineLen, strlen($trace['line']));
                             } else {
                                 $trace['line'] = '';
                             }
 
                             $info = '';
 
-                            if ( $i === 0 && $altInfo !== null ) {
+                            if ($i === 0 && $altInfo !== null) {
                                 $info = $altInfo;
                             /*
                              * Skip for the first iteration,
                              * as it's usually magical PHP calls.
                              */
-                            } else if (
+                            } elseif (
                                 $i > 0 && (
                                         isset($trace['class']) ||
                                         isset($trace['type']) ||
@@ -2147,9 +2185,9 @@
                                 )
                             ) {
                                 $args = array();
-                                if ( isset($trace['args']) ) {
-                                    foreach ( $trace['args'] as $arg ) {
-                                        $args[]= ErrorHandler::identifyTypeHTML( $arg, 1 );
+                                if (isset($trace['args'])) {
+                                    foreach ($trace['args'] as $arg) {
+                                        $args[]= ErrorHandler::identifyTypeHTML($arg, 1);
                                     }
                                 }
 
@@ -2159,22 +2197,22 @@
                                         isset($trace['function'])   ? $trace['function']    : null,
                                         $args
                                 );
-                            } else if ( isset($trace['info']) && $trace['info'] !== '' ) {
-                                $info = ErrorHandler::syntaxHighlight( $trace['info'] );
-                            } else if ( isset($trace['file']) && !isset($trace['info']) ) {
-                                $contents = $this->getFileContents( $trace['file'] );
+                            } elseif (isset($trace['info']) && $trace['info'] !== '') {
+                                $info = ErrorHandler::syntaxHighlight($trace['info']);
+                            } elseif (isset($trace['file']) && !isset($trace['info'])) {
+                                $contents = $this->getFileContents($trace['file']);
 
-                                if ( $contents ) {
+                                if ($contents) {
                                     $info = ErrorHandler::syntaxHighlight(
-                                            trim( $contents[$trace['line']-1] )
+                                            trim($contents[$trace['line']-1])
                                     );
                                 }
-                            } 
+                            }
 
                             $trace['info'] = $info;
 
-                            if ( isset($trace['file']) ) {
-                                list( $type, $file ) = $this->getFolderType( $root, $trace['file'] );
+                            if (isset($trace['file'])) {
+                                list($type, $file) = $this->getFolderType($root, $trace['file']);
 
                                 $trace['file_type'] = $type;
                                 $trace['is_native'] = false;
@@ -2187,7 +2225,7 @@
 
                             $trace['file'] = $file;
 
-                            $fileLen = max( $fileLen, strlen($file) );
+                            $fileLen = max($fileLen, strlen($file));
 
                             $stackTrace[$i] = $trace;
                         }
@@ -2197,7 +2235,7 @@
                      * We are allowed to highlight just once, that's it.
                      */
                     $highlightI = -1;
-                    foreach ( $stackTrace as $i => $trace ) {
+                    foreach ($stackTrace as $i => $trace) {
                         if (
                                 $trace['line'] === $errLine &&
                                 $trace['file'] === $errFile
@@ -2207,26 +2245,26 @@
                         }
                     }
 
-                    foreach ( $stackTrace as $i => $trace ) {
-                        if ( $trace ) {
+                    foreach ($stackTrace as $i => $trace) {
+                        if ($trace) {
                             // line
-                            $line = str_pad( $trace['line']     , $lineLen, ' ', STR_PAD_LEFT  );
+                            $line = str_pad($trace['line'], $lineLen, ' ', STR_PAD_LEFT);
 
                             // file
                             $file = $trace['file'];
                             $fileKlass = '';
-                            if ( $trace['is_native'] ) {
+                            if ($trace['is_native']) {
                                 $fileKlass = 'file-internal-php';
                             } else {
-                                $fileKlass = 'filename ' . ErrorHandler::folderTypeToCSS( $trace['file_type'] );
+                                $fileKlass = 'filename ' . ErrorHandler::folderTypeToCSS($trace['file_type']);
                             }
-                            $file = $file . str_pad( '', $fileLen-strlen($file), ' ', STR_PAD_LEFT );
+                            $file = $file . str_pad('', $fileLen-strlen($file), ' ', STR_PAD_LEFT);
 
                             // info
                             $info = $trace['info'];
-                            if ( $info ) {
-                                $info = str_replace( "\n", '\n', $info );
-                                $info = str_replace( "\r", '\r', $info );
+                            if ($info) {
+                                $info = str_replace("\n", '\n', $info);
+                                $info = str_replace("\r", '\r', $info);
                             } else {
                                 $info = '&nbsp;';
                             }
@@ -2237,15 +2275,15 @@
                                     "<td class='$fileKlass'>$file</td>" .
                                     "<td class='lineinfo'>$info</td>"   ;
 
-                            if ( $trace['is_native'] ) {
+                            if ($trace['is_native']) {
                                 $cssClass = 'is-native ';
                             } else {
                                 $cssClass = '';
                             }
 
-                            if ( $highlightI === $i ) {
+                            if ($highlightI === $i) {
                                 $cssClass .= ' highlight';
-                            } else if ( $highlightI > $i ) {
+                            } elseif ($highlightI > $i) {
                                 $cssClass .= ' pre-highlight';
                             }
 
@@ -2258,7 +2296,7 @@
 
                                 $exHtml = '<tr class="error-stack-trace-exception"><td>' .
                                             'exception &quot;' .
-                                            htmlspecialchars( $ex->getMessage() ) .
+                                            htmlspecialchars($ex->getMessage()) .
                                             '&quot;' .
                                         '</td></tr>';
                             } else {
@@ -2266,7 +2304,7 @@
                             }
 
                             $data = '';
-                            if ( isset($trace['file-lines-id']) ) {
+                            if (isset($trace['file-lines-id'])) {
                                 $data = 'data-file-lines-id="' . $trace['file-lines-id'] . '"';
                             }
 
@@ -2274,24 +2312,25 @@
                         }
                     }
 
-                    return '<table id="error-stack-trace">' . join( "", $stackTrace ) . '</table>';
+                    return '<table id="error-stack-trace">' . join("", $stackTrace) . '</table>';
                 } else {
                     return null;
                 }
             }
 
-            private function logError( $message, $file, $line, $ex=null ) {
-                if ( $ex ) {
+            private function logError($message, $file, $line, $ex=null)
+            {
+                if ($ex) {
                     $trace = $ex->getTraceAsString();
-                    $parts = explode( "\n", $trace );
-                    $trace = "        " . join( "\n        ", $parts );
+                    $parts = explode("\n", $trace);
+                    $trace = "        " . join("\n        ", $parts);
 
-                    if ( ! ErrorHandler::isIIS() ) {
-                        error_log( "$message \n           $file, $line \n$trace" );
+                    if (! ErrorHandler::isIIS()) {
+                        error_log("$message \n           $file, $line \n$trace");
                     }
                 } else {
-                    if ( ! ErrorHandler::isIIS() ) {
-                        error_log( "$message \n           $file, $line" );
+                    if (! ErrorHandler::isIIS()) {
+                        error_log("$message \n           $file, $line");
                     }
                 }
             }
@@ -2299,18 +2338,20 @@
             /**
              * Given a class name, which can include a namespace,
              * this will report that it is not found.
-             * 
+             *
              * This will also report it as an exception,
              * so you will get a full stack trace.
              */
-            public function reportClassNotFound( $className ) {
-                throw new ErrorException( "Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__ );
+            public function reportClassNotFound($className)
+            {
+                throw new ErrorException("Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__);
             }
 
             /**
              * Given an exception, this will report it.
              */
-            public function reportException( $ex ) {
+            public function reportException($ex)
+            {
                 $this->reportError(
                         $ex->getCode(),
                         $ex->getMessage(),
@@ -2322,16 +2363,17 @@
 
             /**
              * The entry point for handling an error.
-             * 
+             *
              * This is the lowest entry point for error reporting,
              * and for that reason it can either take just error info,
              * or a combination of error and exception information.
-             * 
+             *
              * Note that this will still log errors in the error log
              * even when it's disabled with ini. It just does nothing
              * more than that.
              */
-            public function reportError( $code, $message, $errLine, $errFile, $ex=null ) {
+            public function reportError($code, $message, $errLine, $errFile, $ex=null)
+            {
                 $this->discardBuffer();
 
                 if (
@@ -2350,7 +2392,7 @@
                     $stackTrace = $ex->getTrace();
                 }
 
-                $this->logError( $message, $errFile, $errLine, $ex );
+                $this->logError($message, $errFile, $errLine, $ex);
 
                 /**
                  * It runs if:
@@ -2369,10 +2411,10 @@
                 ) {
                     $root = $this->applicationRoot;
 
-                    list( $ex, $stackTrace, $code, $errFile, $errLine ) =
-                            $this->getStackTrace( $ex, $code, $errFile, $errLine );
+                    list($ex, $stackTrace, $code, $errFile, $errLine) =
+                            $this->getStackTrace($ex, $code, $errFile, $errLine);
 
-                    list( $message, $srcErrFile, $srcErrLine, $altInfo ) =
+                    list($message, $srcErrFile, $srcErrLine, $altInfo) =
                             $this->improveErrorMessage(
                                     $ex,
                                     $code,
@@ -2386,17 +2428,17 @@
                     $errFile = $srcErrFile;
                     $errLine = $srcErrLine;
 
-                    list( $fileLinesSets, $numFileLines ) = $this->generateFileLineSets( $srcErrFile, $srcErrLine, $stackTrace );
+                    list($fileLinesSets, $numFileLines) = $this->generateFileLineSets($srcErrFile, $srcErrLine, $stackTrace);
 
-                    list( $type, $errFile ) = $this->getFolderType( $root, $errFile );
-                    $errFileType = ErrorHandler::folderTypeToCSS( $type );
+                    list($type, $errFile) = $this->getFolderType($root, $errFile);
+                    $errFileType = ErrorHandler::folderTypeToCSS($type);
 
-                    $stackTrace = $this->parseStackTrace( $code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo );
-                    $fileLines  = $this->readCodeFile( $srcErrFile, $srcErrLine );
+                    $stackTrace = $this->parseStackTrace($code, $message, $errLine, $errFile, $stackTrace, $root, $altInfo);
+                    $fileLines  = $this->readCodeFile($srcErrFile, $srcErrLine);
 
                     // load the session, if it's there
 
-                    if ( isset($_COOKIE[session_name()]) && session_id() !== '' ) {
+                    if (isset($_COOKIE[session_name()]) && session_id() !== '') {
                         session_start();
                     }
 
@@ -2405,10 +2447,10 @@
 
                     $dump = $this->generateDumpHTML(
                             array(
-                                    'post'    => ( isset($_POST)    ? $_POST    : array() ),
-                                    'get'     => ( isset($_GET)     ? $_GET     : array() ),
-                                    'session' => ( isset($_SESSION) ? $_SESSION : array() ),
-                                    'cookies' => ( isset($_COOKIE)  ? $_COOKIE  : array() )
+                                    'post'    => (isset($_POST)    ? $_POST    : array()),
+                                    'get'     => (isset($_GET)     ? $_GET     : array()),
+                                    'session' => (isset($_SESSION) ? $_SESSION : array()),
+                                    'cookies' => (isset($_COOKIE)  ? $_COOKIE  : array())
                             ),
 
                             $request,
@@ -2416,7 +2458,7 @@
 
                             $_SERVER
                     );
-                    $this->displayError( $message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump );
+                    $this->displayError($message, $srcErrLine, $errFile, $errFileType, $stackTrace, $fileLinesSets, $numFileLines, $dump);
 
                     // exit in order to end processing
                     $this->turnOff();
@@ -2424,10 +2466,11 @@
                 }
             }
 
-            private function getStackTrace( $ex, $code, $errFile, $errLine ) {
+            private function getStackTrace($ex, $code, $errFile, $errLine)
+            {
                 $stackTrace = null;
 
-                if ( $ex !== null ) {
+                if ($ex !== null) {
                     $next = $ex;
                     $stackTrace = array();
                     $skipStacks = 0;
@@ -2443,27 +2486,27 @@
                         $file  = $ex->getFile();
                         $line  = $ex->getLine();
 
-                        if ( $stackTrace !== null && count($stackTrace) > 0 ) {
-                            $stack = array_slice( $stack, 0, count($stack)-count($stackTrace) + 1 );
+                        if ($stackTrace !== null && count($stackTrace) > 0) {
+                            $stack = array_slice($stack, 0, count($stack)-count($stackTrace) + 1);
                         }
 
-                        if ( count($stack) > 0 && (
+                        if (count($stack) > 0 && (
                             !isset($stack[0]['file']) ||
                             !isset($stack[0]['line']) ||
                             $stack[0]['file'] !== $file ||
                             $stack[0]['line'] !== $line
-                        ) ) {
-                            array_unshift( $stack, array(
+                        )) {
+                            array_unshift($stack, array(
                                     'file' => $file,
                                     'line' => $line
-                            ) );
+                            ));
                         }
 
-                        $stackTrace = ( $stackTrace !== null ) ?
-                                array_merge( $stack, $stackTrace ) :
+                        $stackTrace = ($stackTrace !== null) ?
+                                array_merge($stack, $stackTrace) :
                                 $stack ;
 
-                        if ( count($stackTrace) > 0 ) {
+                        if (count($stackTrace) > 0) {
                             $stackTrace[0]['exception'] = $ex;
                         }
                     }
@@ -2480,21 +2523,22 @@
                 return array( $ex, $stackTrace, $code, $errFile, $errLine );
             }
 
-            private function generateDumpHTML( $arrays, $request, $response, $server ) {
-                $arrToHtml = function( $name, $array, $css='' ) {
+            private function generateDumpHTML($arrays, $request, $response, $server)
+            {
+                $arrToHtml = function ($name, $array, $css='') {
                     $max = 0;
 
-                    foreach ( $array as $e => $v ) {
-                        $max = max( $max, strlen( $e ) );
+                    foreach ($array as $e => $v) {
+                        $max = max($max, strlen($e));
                     }
 
                     $snippet = "<h2 class='error_dump_header'>$name</h2>";
 
-                    foreach ( $array as $e => $v ) {
-                        $e = str_pad( $e, $max, ' ', STR_PAD_RIGHT );
+                    foreach ($array as $e => $v) {
+                        $e = str_pad($e, $max, ' ', STR_PAD_RIGHT);
 
-                        $e = htmlentities( $e );
-                        $v = ErrorHandler::identifyTypeHTML( $v, 3 );
+                        $e = htmlentities($e);
+                        $v = ErrorHandler::identifyTypeHTML($v, 3);
 
                         $snippet .= "<div class='error_dump_key'>$e</div><div class='error_dump_mapping'>=&gt;</div><div class='error_dump_value'>$v</div>";
                     }
@@ -2503,9 +2547,9 @@
                 };
 
                 $html = '';
-                foreach ( $arrays as $key => $value ) {
-                    if ( isset($value) && $value ) {
-                        $html .= $arrToHtml( $key, $value );
+                foreach ($arrays as $key => $value) {
+                    if (isset($value) && $value) {
+                        $html .= $arrToHtml($key, $value);
                     } else {
                         unset($arrays[$key]);
                     }
@@ -2513,36 +2557,37 @@
 
                 return "<div class='error-dumps'>" .
                             $html .
-                            $arrToHtml( 'request', $request, 'dump_request' ) .
-                            $arrToHtml( 'response', $response, 'dump_response' ) .
-                            $arrToHtml( 'server', $server, 'dump_server' ) .
+                            $arrToHtml('request', $request, 'dump_request') .
+                            $arrToHtml('response', $response, 'dump_response') .
+                            $arrToHtml('server', $server, 'dump_server') .
                         "</div>";
             }
 
-            private function generateFileLineSets( $srcErrFile, $srcErrLine, &$stackTrace ) {
+            private function generateFileLineSets($srcErrFile, $srcErrLine, &$stackTrace)
+            {
                 $fileLineID = 1;
                 $srcErrID = "file-line-$fileLineID";
                 $fileLineID++;
 
-                $lines = $this->readCodeFile( $srcErrFile, $srcErrLine );
-                $minSize = count( $lines );
-                $fileLinesSets = array( new FileLinesSet( $srcErrLine, $srcErrID, $lines, true ) );
+                $lines = $this->readCodeFile($srcErrFile, $srcErrLine);
+                $minSize = count($lines);
+                $fileLinesSets = array( new FileLinesSet($srcErrLine, $srcErrID, $lines, true) );
 
-                if ( $stackTrace ) {
-                    foreach ( $stackTrace as $i => &$trace ) {
-                        if ( $trace && isset($trace['file']) && isset($trace['line']) ) {
+                if ($stackTrace) {
+                    foreach ($stackTrace as $i => &$trace) {
+                        if ($trace && isset($trace['file']) && isset($trace['line'])) {
                             $file = $trace['file'];
                             $line = $trace['line'];
 
-                            if ( $file === $srcErrFile && $line === $srcErrLine ) {
+                            if ($file === $srcErrFile && $line === $srcErrLine) {
                                 $trace['file-lines-id'] = $srcErrID;
                             } else {
                                 $traceFileID = "file-line-$fileLineID";
                                 $trace['file-lines-id'] = $traceFileID;
 
-                                $lines = $this->readCodeFile( $file, $line );
-                                $minSize = max( $minSize, count($lines) );
-                                $fileLinesSets[]= new FileLinesSet( $line, $traceFileID, $lines, false );
+                                $lines = $this->readCodeFile($file, $line);
+                                $minSize = max($minSize, count($lines));
+                                $fileLinesSets[]= new FileLinesSet($line, $traceFileID, $lines, false);
 
                                 $fileLineID++;
                             }
@@ -2556,112 +2601,115 @@
             /*
              * Even if disabled, we still act like reporting is on,
              * if it's turned on.
-             * 
+             *
              * We just don't do anything.
              */
-            private function setEnabled( $isOn ) {
+            private function setEnabled($isOn)
+            {
                 $wasOn = $this->isOn;
                 $this->isOn = $isOn;
 
                 global $_php_error_is_ini_enabled;
-                if ( $_php_error_is_ini_enabled ) {
+                if ($_php_error_is_ini_enabled) {
                     /*
                      * Only turn off, if we're moving from on to off.
-                     * 
+                     *
                      * This is so if it's turned off without turning on,
                      * we don't change anything.
                      */
-                    if ( !$isOn ) {
-                        if ( $wasOn ) {
+                    if (!$isOn) {
+                        if ($wasOn) {
                             $this->runDisableErrors();
                         }
                     /*
                      * Always turn it on, even if already on.
-                     * 
+                     *
                      * This is incase it was messed up in some way
                      * by the user.
                      */
-                    } else if ( $isOn ) {
+                    } elseif ($isOn) {
                         $this->runEnableErrors();
                     }
                 }
             }
 
-            private function runDisableErrors() {
+            private function runDisableErrors()
+            {
                 global $_php_error_is_ini_enabled;
 
-                if ( $_php_error_is_ini_enabled ) {
-                    error_reporting( $this->defaultErrorReportingOff );
+                if ($_php_error_is_ini_enabled) {
+                    error_reporting($this->defaultErrorReportingOff);
 
-                    @ini_restore( 'html_errors' );
+                    @ini_restore('html_errors');
                     
-                    if ( ErrorHandler::isIIS() ) {
-                        @ini_restore( 'log_errors' );
+                    if (ErrorHandler::isIIS()) {
+                        @ini_restore('log_errors');
                     }
                 }
             }
 
             /*
              * Now the actual hooking into PHP's error reporting.
-             * 
+             *
              * We enable _ALL_ errors, and make them all exceptions.
              * We also need to hook into the shutdown function so
              * we can catch fatal and compile time errors.
              */
-            private function runEnableErrors() {
+            private function runEnableErrors()
+            {
                 global $_php_error_is_ini_enabled;
                 
-                if ( $_php_error_is_ini_enabled ) {
+                if ($_php_error_is_ini_enabled) {
                     $catchSurpressedErrors = &$this->catchSurpressedErrors;
                     $self = $this;
 
                     // all errors \o/ !
-                    error_reporting( $this->defaultErrorReportingOn );
-                    @ini_set( 'html_errors', false );
+                    error_reporting($this->defaultErrorReportingOn);
+                    @ini_set('html_errors', false);
 
-                    if ( ErrorHandler::isIIS() ) {
-                        @ini_set( 'log_errors', false );
+                    if (ErrorHandler::isIIS()) {
+                        @ini_set('log_errors', false);
                     }
 
                     set_error_handler(
-                            function( $code, $message, $file, $line, $context ) use ( $self, &$catchSurpressedErrors ) {
+                            function ($code, $message, $file, $line, $context) use ($self, &$catchSurpressedErrors) {
                                 /*
                                  * DO NOT! log the error.
-                                 * 
+                                 *
                                  * Either it's thrown as an exception, and so logged by the exception handler,
                                  * or we return false, and it's logged by PHP.
-                                 * 
+                                 *
                                  * Also DO NOT! throw an exception, instead report it.
                                  * This is because if an operation raises both a user AND
                                  * fatal error (such as require), then the exception is
                                  * silently ignored.
                                  */
-                                if ( $self->isOn() ) {
+                                if ($self->isOn()) {
                                     /*
                                      * When using an @, the error reporting drops to 0.
                                      */
-                                    if ( error_reporting() !== 0 || $catchSurpressedErrors ) {
-                                        $ex = new ErrorException( $message, $code, $code, $file, $line );
+                                    if (error_reporting() !== 0 || $catchSurpressedErrors) {
+                                        $ex = new ErrorException($message, $code, $code, $file, $line);
 
-                                        $self->reportException( $ex );
+                                        $self->reportException($ex);
                                     }
                                 } else {
                                     return false;
                                 }
                             },
-                            $this->defaultErrorReportingOn 
+                            $this->defaultErrorReportingOn
                     );
 
-                    set_exception_handler( function($ex) use ( $self ) {
-                        if ( $self->isOn() ) {
-                            $self->reportException( $ex );
+                    set_exception_handler(function ($ex) use ($self) {
+                        if ($self->isOn()) {
+                            $self->reportException($ex);
                         } else {
                             return false;
                         }
                     });
 
-                    if ( ! $self->isShutdownRegistered ) {
-                        if ( $self->catchClassNotFound ) {
+                    if (! $self->isShutdownRegistered) {
+                        if ($self->catchClassNotFound) {
                             $classException = &$self->classNotFoundException;
                             $autoloaderFuns = ErrorHandler::$SAFE_AUTOLOADER_FUNCTIONS;
 
@@ -2675,31 +2723,31 @@
                              * This is done for two reasons:
                              *  - functions like 'class_exists' will run the autoloader, and we shouldn't error on them
                              *  - on PHP 5.3.0, the class loader registered functions does *not* return closure objects, so we can't do anything clever.
-                             * 
+                             *
                              * So we watch, but don't touch.
                              */
-                            spl_autoload_register( function($className) use ( $self, &$classException, &$autoloaderFuns ) {
-                                if ( $self->isOn() ) {
+                            spl_autoload_register(function ($className) use ($self, &$classException, &$autoloaderFuns) {
+                                if ($self->isOn()) {
                                     $classException = null;
 
                                     // search the stack first, to check if we are running from 'class_exists' before we error
-                                    if ( defined('DEBUG_BACKTRACE_IGNORE_ARGS') ) {
-                                        $trace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS );
+                                    if (defined('DEBUG_BACKTRACE_IGNORE_ARGS')) {
+                                        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
                                     } else {
                                         $trace = debug_backtrace();
                                     }
                                     $error = true;
 
-                                    foreach ( $trace as $row ) {
-                                        if ( isset($row['function']) ) {
+                                    foreach ($trace as $row) {
+                                        if (isset($row['function'])) {
                                             $function = $row['function'];
 
                                             // they are just checking, so don't error
-                                            if ( in_array($function, $autoloaderFuns, true) ) {
+                                            if (in_array($function, $autoloaderFuns, true)) {
                                                 $error = false;
                                                 break;
                                             // not us, and not the autoloader, so error!
-                                            } else if (
+                                            } elseif (
                                                     $function !== '__autoload' &&
                                                     $function !== 'spl_autoload_call' &&
                                                     strpos($function, 'php_error\\') === false
@@ -2709,11 +2757,11 @@
                                         }
                                     }
 
-                                    if ( $error ) {
-                                        $classException = new ErrorException( "Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__ );
+                                    if ($error) {
+                                        $classException = new ErrorException("Class '$className' not found", E_ERROR, E_ERROR, __FILE__, __LINE__);
                                     }
                                 }
-                            } );
+                            });
                         }
 
                         $self->isShutdownRegistered = true;
@@ -2721,7 +2769,8 @@
                 }
             }
 
-            private function displayJSInjection() {
+            private function displayJSInjection()
+            {
                 ?><script data-php_error="magic JS, just ignore this!">
                     "use strict";
 
@@ -3111,13 +3160,15 @@
                         }
                     })( window );
                 </script><?php
+
             }
 
             /**
              * The actual display logic.
              * This outputs the error details in HTML.
              */
-            private function displayError( $message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo ) {
+            private function displayError($message, $errLine, $errFile, $errFileType, $stackTrace, &$fileLinesSets, $numFileLines, $dumpInfo)
+            {
                 $applicationRoot   = $this->applicationRoot;
                 $serverName        = $this->serverName;
                 $backgroundText    = $this->backgroundText;
@@ -3128,13 +3179,13 @@
                  * in some versions it's a blank string,
                  * whilst in others it's not set at all.
                  */
-                if ( isset($_SERVER['QUERY_STRING']) ) {
-                    $requestUrl = str_replace( $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
-                    $requestUrlLen = strlen( $requestUrl );
+                if (isset($_SERVER['QUERY_STRING'])) {
+                    $requestUrl = str_replace($_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI']);
+                    $requestUrlLen = strlen($requestUrl);
                     
                     // remove the '?' if it's there (I suspect it isn't always, but don't take my word for it!)
-                    if ( $requestUrlLen > 0 && substr($requestUrl, $requestUrlLen-1) === '?' ) {
-                        $requestUrl = substr( $requestUrl, 0, $requestUrlLen-1 );
+                    if ($requestUrlLen > 0 && substr($requestUrl, $requestUrlLen-1) === '?') {
+                        $requestUrl = substr($requestUrl, 0, $requestUrlLen-1);
                     }
                 } else {
                     $requestUrl = $_SERVER['REQUEST_URI'];
@@ -3142,15 +3193,15 @@
 
                 $this->displayHTML(
                         // pre, in the head
-                        function() use( $message, $errFile, $errLine ) {
-                                echo "<!--\n" .
+                        function () use ($message, $errFile, $errLine) {
+                            echo "<!--\n" .
                                         "$message\n" .
                                         "$errFile, $errLine\n" .
                                     "-->";
                         },
 
                         // the content
-                        function() use (
+                        function () use (
                                 $requestUrl,
                                 $backgroundText, $serverName, $applicationRoot,
                                 $message, $errLine, $errFile, $errFileType, $stackTrace,
@@ -3158,11 +3209,13 @@
                                 $displayLineNumber,
                                 $dumpInfo
                         ) {
-                            if ( $backgroundText ) { ?>
+                            if ($backgroundText) {
+                                ?>
                                 <div id="error-wrap">
                                     <div id="error-back"><?php echo $backgroundText ?></div>
                                 </div>
-                            <?php } ?>
+                            <?php 
+                            } ?>
 
                             <h2 id="error-file-root"><?php echo $serverName ?> | <?php echo $applicationRoot ?></h2>
                             <h2 id="ajax-info">
@@ -3176,10 +3229,11 @@
                             </h2>
                             <h1 id="error-title"><?php echo $message ?></h1>
                             <h2 id="error-file" class="<?php echo $fileLinesSets ? 'has_code' : '' ?>"><span id="error-linenumber"><?php echo $errLine ?></span> <span id="error-filename" class="<?php echo $errFileType ?>"><?php echo $errFile ?></span></h2>
-                            <?php if ( $fileLinesSets ) { ?>
+                            <?php if ($fileLinesSets) {
+                                ?>
                                 <div id="error-files">
                                     <?php
-                                        foreach ( $fileLinesSets as $fileLinesSet ) {
+                                        foreach ($fileLinesSets as $fileLinesSet) {
                                             $id            = $fileLinesSet->getHTMLID();
                                             $fileLines     = $fileLinesSet->getLines();
                                             $show          = $fileLinesSet->isShown();
@@ -3188,18 +3242,17 @@
                                             // calculate last line number length
                                             end($fileLines);
                                             $maxLineNumber = key($fileLines);
-                                            $lineDecimals  = strlen($maxLineNumber);
-                                        ?>
+                                            $lineDecimals  = strlen($maxLineNumber); ?>
                                             <div id="<?php echo $id ?>" class="error-file-lines <?php echo $show ? 'show' : '' ?>">
                                                 <?php
-                                                    foreach ( $fileLines as $lineNum => $origLine ) {
+                                                    foreach ($fileLines as $lineNum => $origLine) {
                                                         $line = ltrim($origLine, ' ');
                                                         $numSpaces = strlen($origLine) - strlen($line);
 
                                                         $size = 8*$numSpaces + 64;
                                                         $style = "style='padding-left: " . $size . "px; text-indent: -" . $size . "px;'";
 
-                                                        for ( $i = 0; $i < $numSpaces; $i++ ) {
+                                                        for ($i = 0; $i < $numSpaces; $i++) {
                                                             $line = "&nbsp;$line";
                                                         }
 
@@ -3207,25 +3260,25 @@
                                                             $lineNumLabel = str_replace(' ', '&nbsp;', sprintf("%{$lineDecimals}d", $lineNum));
                                                         } else {
                                                             $lineNumLabel = '';
-                                                        }
-
-                                                        ?><div <?php echo $style ?> class="error-file-line <?php echo ($lineNum === $highlightLine) ? 'highlight' : '' ?>">
+                                                        } ?><div <?php echo $style ?> class="error-file-line <?php echo ($lineNum === $highlightLine) ? 'highlight' : '' ?>">
                                                             <span class="error-file-line-number"><?php echo $lineNumLabel ?></span>
                                                             <span class="error-file-line-content"><?php echo $line ?></span>
                                                         </div>
                                                         <?php
-                                                    }
-                                                ?>
+
+                                                    } ?>
                                             </div>
-                                    <?php } ?>
+                                    <?php 
+                                        } ?>
                                 </div>
-                            <?php }
+                            <?php 
+                            }
                             
-                            if ( $stackTrace !== null ) {
+                            if ($stackTrace !== null) {
                                 echo $stackTrace;
                             }
 
-                            if ( $dumpInfo !== null ) {
+                            if ($dumpInfo !== null) {
                                 echo $dumpInfo;
                             }
                         },
@@ -3234,7 +3287,7 @@
                          * Adds:
                          *  = mouse movement for switching the code snippet in real time
                          */
-                        function() {
+                        function () {
                             ?><script>
                                 "use strict";
 
@@ -3300,27 +3353,29 @@
                                     }
                                 } );
                             </script><?php
+
                         }
                 );
             }
 
             /**
              * A generic function for clearing the buffer, and displaying error output.
-             * 
+             *
              * A function needs to be given, and then this is run at the correct time.
              * There are two ways this can be used:
-             * 
+             *
              *  displayHTML( $head, $body )
-             * 
+             *
              * Here 'head' is run straight after the doctype, whilst 'body' is run as
              * the body for the content. The other way is:
-             * 
+             *
              *  displayHTML( $body )
-             * 
+             *
              * Here there is only content.
              */
-            function displayHTML( Closure $head, $body=null, $javascript=null ) {
-                if ( func_num_args() === 2 ) {
+            public function displayHTML(Closure $head, $body=null, $javascript=null)
+            {
+                if (func_num_args() === 2) {
                     $body = $head;
                     $head = null;
                 }
@@ -3328,22 +3383,21 @@
                 // clean out anything displayed already
                 try {
                     @ob_clean();
-                } catch ( Exception $ex ) { /* do nothing */ }
+                } catch (Exception $ex) { /* do nothing */
+                }
 
                 if (!$this->htmlOnly && ErrorHandler::isNonPHPRequest()) {
-                    @header( "Content-Type: text/html" );
+                    @header("Content-Type: text/html");
                 }
-                @header( ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE );
+                @header(ErrorHandler::PHP_ERROR_MAGIC_HEADER_KEY . ': ' . ErrorHandler::PHP_ERROR_MAGIC_HEADER_VALUE);
 
                 echo '<!DOCTYPE html>';
 
-                if ( $head !== null ) {
+                if ($head !== null) {
                     $head();
                 }
 
-                echo "<link href='http://fonts.googleapis.com/css?family=Droid+Sans+Mono' rel='stylesheet' type='text/css'>";
-
-                ?><style>
+                echo "<link href='http://fonts.googleapis.com/css?family=Droid+Sans+Mono' rel='stylesheet' type='text/css'>"; ?><style>
                     html, body {
                         margin: 0;
                         padding: 0; 
@@ -3789,11 +3843,11 @@
                     <?php
                     /*
                      * Code and Stack highlighting colours
-                     * 
+                     *
                      * The way this works, is that syntax highlighting is turned off
                      * for .pre-highlight. It then gets turns on for .pre-highlight,
                      * if it matches certain criteria.
-                     * 
+                     *
                      * The emphasis is that pre-highlight is by default 'no highlight'.
                      */
                     ?>
@@ -3930,8 +3984,7 @@
                 </style><?php
 
                 ?><div class="background"><?php
-                    $body();
-                ?></div><?php
+                    $body(); ?></div><?php
 
                 ?><script>
                     /*! jQuery v1.7.2 jquery.com | jquery.org/license */
@@ -3940,7 +3993,7 @@
                     .clean(arguments);a.push.apply(a,this.toArray());return this.pushStack(a,"before",arguments)}},after:function(){if(this[0]&&this[0].parentNode)return this.domManip(arguments,!1,function(a){this.parentNode.insertBefore(a,this.nextSibling)});if(arguments.length){var a=this.pushStack(this,"after",arguments);a.push.apply(a,f.clean(arguments));return a}},remove:function(a,b){for(var c=0,d;(d=this[c])!=null;c++)if(!a||f.filter(a,[d]).length)!b&&d.nodeType===1&&(f.cleanData(d.getElementsByTagName("*")),f.cleanData([d])),d.parentNode&&d.parentNode.removeChild(d);return this},empty:function(){for(var a=0,b;(b=this[a])!=null;a++){b.nodeType===1&&f.cleanData(b.getElementsByTagName("*"));while(b.firstChild)b.removeChild(b.firstChild)}return this},clone:function(a,b){a=a==null?!1:a,b=b==null?a:b;return this.map(function(){return f.clone(this,a,b)})},html:function(a){return f.access(this,function(a){var c=this[0]||{},d=0,e=this.length;if(a===b)return c.nodeType===1?c.innerHTML.replace(W,""):null;if(typeof a=="string"&&!ba.test(a)&&(f.support.leadingWhitespace||!X.test(a))&&!bg[(Z.exec(a)||["",""])[1].toLowerCase()]){a=a.replace(Y,"<$1></$2>");try{for(;d<e;d++)c=this[d]||{},c.nodeType===1&&(f.cleanData(c.getElementsByTagName("*")),c.innerHTML=a);c=0}catch(g){}}c&&this.empty().append(a)},null,a,arguments.length)},replaceWith:function(a){if(this[0]&&this[0].parentNode){if(f.isFunction(a))return this.each(function(b){var c=f(this),d=c.html();c.replaceWith(a.call(this,b,d))});typeof a!="string"&&(a=f(a).detach());return this.each(function(){var b=this.nextSibling,c=this.parentNode;f(this).remove(),b?f(b).before(a):f(c).append(a)})}return this.length?this.pushStack(f(f.isFunction(a)?a():a),"replaceWith",a):this},detach:function(a){return this.remove(a,!0)},domManip:function(a,c,d){var e,g,h,i,j=a[0],k=[];if(!f.support.checkClone&&arguments.length===3&&typeof j=="string"&&bd.test(j))return this.each(function(){f(this).domManip(a,c,d,!0)});if(f.isFunction(j))return this.each(function(e){var g=f(this);a[0]=j.call(this,e,c?g.html():b),g.domManip(a,c,d)});if(this[0]){i=j&&j.parentNode,f.support.parentNode&&i&&i.nodeType===11&&i.childNodes.length===this.length?e={fragment:i}:e=f.buildFragment(a,this,k),h=e.fragment,h.childNodes.length===1?g=h=h.firstChild:g=h.firstChild;if(g){c=c&&f.nodeName(g,"tr");for(var l=0,m=this.length,n=m-1;l<m;l++)d.call(c?bi(this[l],g):this[l],e.cacheable||m>1&&l<n?f.clone(h,!0,!0):h)}k.length&&f.each(k,function(a,b){b.src?f.ajax({type:"GET",global:!1,url:b.src,async:!1,dataType:"script"}):f.globalEval((b.text||b.textContent||b.innerHTML||"").replace(bf,"/*$0*/")),b.parentNode&&b.parentNode.removeChild(b)})}return this}}),f.buildFragment=function(a,b,d){var e,g,h,i,j=a[0];b&&b[0]&&(i=b[0].ownerDocument||b[0]),i.createDocumentFragment||(i=c),a.length===1&&typeof j=="string"&&j.length<512&&i===c&&j.charAt(0)==="<"&&!bb.test(j)&&(f.support.checkClone||!bd.test(j))&&(f.support.html5Clone||!bc.test(j))&&(g=!0,h=f.fragments[j],h&&h!==1&&(e=h)),e||(e=i.createDocumentFragment(),f.clean(a,i,e,d)),g&&(f.fragments[j]=h?e:1);return{fragment:e,cacheable:g}},f.fragments={},f.each({appendTo:"append",prependTo:"prepend",insertBefore:"before",insertAfter:"after",replaceAll:"replaceWith"},function(a,b){f.fn[a]=function(c){var d=[],e=f(c),g=this.length===1&&this[0].parentNode;if(g&&g.nodeType===11&&g.childNodes.length===1&&e.length===1){e[b](this[0]);return this}for(var h=0,i=e.length;h<i;h++){var j=(h>0?this.clone(!0):this).get();f(e[h])[b](j),d=d.concat(j)}return this.pushStack(d,a,e.selector)}}),f.extend({clone:function(a,b,c){var d,e,g,h=f.support.html5Clone||f.isXMLDoc(a)||!bc.test("<"+a.nodeName+">")?a.cloneNode(!0):bo(a);if((!f.support.noCloneEvent||!f.support.noCloneChecked)&&(a.nodeType===1||a.nodeType===11)&&!f.isXMLDoc(a)){bk(a,h),d=bl(a),e=bl(h);for(g=0;d[g];++g)e[g]&&bk(d[g],e[g])}if(b){bj(a,h);if(c){d=bl(a),e=bl(h);for(g=0;d[g];++g)bj(d[g],e[g])}}d=e=null;return h},clean:function(a,b,d,e){var g,h,i,j=[];b=b||c,typeof b.createElement=="undefined"&&(b=b.ownerDocument||b[0]&&b[0].ownerDocument||c);for(var k=0,l;(l=a[k])!=null;k++){typeof l=="number"&&(l+="");if(!l)continue;if(typeof l=="string")if(!_.test(l))l=b.createTextNode(l);else{l=l.replace(Y,"<$1></$2>");var m=(Z.exec(l)||["",""])[1].toLowerCase(),n=bg[m]||bg._default,o=n[0],p=b.createElement("div"),q=bh.childNodes,r;b===c?bh.appendChild(p):U(b).appendChild(p),p.innerHTML=n[1]+l+n[2];while(o--)p=p.lastChild;if(!f.support.tbody){var s=$.test(l),t=m==="table"&&!s?p.firstChild&&p.firstChild.childNodes:n[1]==="<table>"&&!s?p.childNodes:[];for(i=t.length-1;i>=0;--i)f.nodeName(t[i],"tbody")&&!t[i].childNodes.length&&t[i].parentNode.removeChild(t[i])}!f.support.leadingWhitespace&&X.test(l)&&p.insertBefore(b.createTextNode(X.exec(l)[0]),p.firstChild),l=p.childNodes,p&&(p.parentNode.removeChild(p),q.length>0&&(r=q[q.length-1],r&&r.parentNode&&r.parentNode.removeChild(r)))}var u;if(!f.support.appendChecked)if(l[0]&&typeof (u=l.length)=="number")for(i=0;i<u;i++)bn(l[i]);else bn(l);l.nodeType?j.push(l):j=f.merge(j,l)}if(d){g=function(a){return!a.type||be.test(a.type)};for(k=0;j[k];k++){h=j[k];if(e&&f.nodeName(h,"script")&&(!h.type||be.test(h.type)))e.push(h.parentNode?h.parentNode.removeChild(h):h);else{if(h.nodeType===1){var v=f.grep(h.getElementsByTagName("script"),g);j.splice.apply(j,[k+1,0].concat(v))}d.appendChild(h)}}}return j},cleanData:function(a){var b,c,d=f.cache,e=f.event.special,g=f.support.deleteExpando;for(var h=0,i;(i=a[h])!=null;h++){if(i.nodeName&&f.noData[i.nodeName.toLowerCase()])continue;c=i[f.expando];if(c){b=d[c];if(b&&b.events){for(var j in b.events)e[j]?f.event.remove(i,j):f.removeEvent(i,j,b.handle);b.handle&&(b.handle.elem=null)}g?delete i[f.expando]:i.removeAttribute&&i.removeAttribute(f.expando),delete d[c]}}}});var bp=/alpha\([^)]*\)/i,bq=/opacity=([^)]*)/,br=/([A-Z]|^ms)/g,bs=/^[\-+]?(?:\d*\.)?\d+$/i,bt=/^-?(?:\d*\.)?\d+(?!px)[^\d\s]+$/i,bu=/^([\-+])=([\-+.\de]+)/,bv=/^margin/,bw={position:"absolute",visibility:"hidden",display:"block"},bx=["Top","Right","Bottom","Left"],by,bz,bA;f.fn.css=function(a,c){return f.access(this,function(a,c,d){return d!==b?f.style(a,c,d):f.css(a,c)},a,c,arguments.length>1)},f.extend({cssHooks:{opacity:{get:function(a,b){if(b){var c=by(a,"opacity");return c===""?"1":c}return a.style.opacity}}},cssNumber:{fillOpacity:!0,fontWeight:!0,lineHeight:!0,opacity:!0,orphans:!0,widows:!0,zIndex:!0,zoom:!0},cssProps:{"float":f.support.cssFloat?"cssFloat":"styleFloat"},style:function(a,c,d,e){if(!!a&&a.nodeType!==3&&a.nodeType!==8&&!!a.style){var g,h,i=f.camelCase(c),j=a.style,k=f.cssHooks[i];c=f.cssProps[i]||i;if(d===b){if(k&&"get"in k&&(g=k.get(a,!1,e))!==b)return g;return j[c]}h=typeof d,h==="string"&&(g=bu.exec(d))&&(d=+(g[1]+1)*+g[2]+parseFloat(f.css(a,c)),h="number");if(d==null||h==="number"&&isNaN(d))return;h==="number"&&!f.cssNumber[i]&&(d+="px");if(!k||!("set"in k)||(d=k.set(a,d))!==b)try{j[c]=d}catch(l){}}},css:function(a,c,d){var e,g;c=f.camelCase(c),g=f.cssHooks[c],c=f.cssProps[c]||c,c==="cssFloat"&&(c="float");if(g&&"get"in g&&(e=g.get(a,!0,d))!==b)return e;if(by)return by(a,c)},swap:function(a,b,c){var d={},e,f;for(f in b)d[f]=a.style[f],a.style[f]=b[f];e=c.call(a);for(f in b)a.style[f]=d[f];return e}}),f.curCSS=f.css,c.defaultView&&c.defaultView.getComputedStyle&&(bz=function(a,b){var c,d,e,g,h=a.style;b=b.replace(br,"-$1").toLowerCase(),(d=a.ownerDocument.defaultView)&&(e=d.getComputedStyle(a,null))&&(c=e.getPropertyValue(b),c===""&&!f.contains(a.ownerDocument.documentElement,a)&&(c=f.style(a,b))),!f.support.pixelMargin&&e&&bv.test(b)&&bt.test(c)&&(g=h.width,h.width=c,c=e.width,h.width=g);return c}),c.documentElement.currentStyle&&(bA=function(a,b){var c,d,e,f=a.currentStyle&&a.currentStyle[b],g=a.style;f==null&&g&&(e=g[b])&&(f=e),bt.test(f)&&(c=g.left,d=a.runtimeStyle&&a.runtimeStyle.left,d&&(a.runtimeStyle.left=a.currentStyle.left),g.left=b==="fontSize"?"1em":f,f=g.pixelLeft+"px",g.left=c,d&&(a.runtimeStyle.left=d));return f===""?"auto":f}),by=bz||bA,f.each(["height","width"],function(a,b){f.cssHooks[b]={get:function(a,c,d){if(c)return a.offsetWidth!==0?bB(a,b,d):f.swap(a,bw,function(){return bB(a,b,d)})},set:function(a,b){return bs.test(b)?b+"px":b}}}),f.support.opacity||(f.cssHooks.opacity={get:function(a,b){return bq.test((b&&a.currentStyle?a.currentStyle.filter:a.style.filter)||"")?parseFloat(RegExp.$1)/100+"":b?"1":""},set:function(a,b){var c=a.style,d=a.currentStyle,e=f.isNumeric(b)?"alpha(opacity="+b*100+")":"",g=d&&d.filter||c.filter||"";c.zoom=1;if(b>=1&&f.trim(g.replace(bp,""))===""){c.removeAttribute("filter");if(d&&!d.filter)return}c.filter=bp.test(g)?g.replace(bp,e):g+" "+e}}),f(function(){f.support.reliableMarginRight||(f.cssHooks.marginRight={get:function(a,b){return f.swap(a,{display:"inline-block"},function(){return b?by(a,"margin-right"):a.style.marginRight})}})}),f.expr&&f.expr.filters&&(f.expr.filters.hidden=function(a){var b=a.offsetWidth,c=a.offsetHeight;return b===0&&c===0||!f.support.reliableHiddenOffsets&&(a.style&&a.style.display||f.css(a,"display"))==="none"},f.expr.filters.visible=function(a){return!f.expr.filters.hidden(a)}),f.each({margin:"",padding:"",border:"Width"},function(a,b){f.cssHooks[a+b]={expand:function(c){var d,e=typeof c=="string"?c.split(" "):[c],f={};for(d=0;d<4;d++)f[a+bx[d]+b]=e[d]||e[d-2]||e[0];return f}}});var bC=/%20/g,bD=/\[\]$/,bE=/\r?\n/g,bF=/#.*$/,bG=/^(.*?):[ \t]*([^\r\n]*)\r?$/mg,bH=/^(?:color|date|datetime|datetime-local|email|hidden|month|number|password|range|search|tel|text|time|url|week)$/i,bI=/^(?:about|app|app\-storage|.+\-extension|file|res|widget):$/,bJ=/^(?:GET|HEAD)$/,bK=/^\/\//,bL=/\?/,bM=/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,bN=/^(?:select|textarea)/i,bO=/\s+/,bP=/([?&])_=[^&]*/,bQ=/^([\w\+\.\-]+:)(?:\/\/([^\/?#:]*)(?::(\d+))?)?/,bR=f.fn.load,bS={},bT={},bU,bV,bW=["*/"]+["*"];try{bU=e.href}catch(bX){bU=c.createElement("a"),bU.href="",bU=bU.href}bV=bQ.exec(bU.toLowerCase())||[],f.fn.extend({load:function(a,c,d){if(typeof a!="string"&&bR)return bR.apply(this,arguments);if(!this.length)return this;var e=a.indexOf(" ");if(e>=0){var g=a.slice(e,a.length);a=a.slice(0,e)}var h="GET";c&&(f.isFunction(c)?(d=c,c=b):typeof c=="object"&&(c=f.param(c,f.ajaxSettings.traditional),h="POST"));var i=this;f.ajax({url:a,type:h,dataType:"html",data:c,complete:function(a,b,c){c=a.responseText,a.isResolved()&&(a.done(function(a){c=a}),i.html(g?f("<div>").append(c.replace(bM,"")).find(g):c)),d&&i.each(d,[c,b,a])}});return this},serialize:function(){return f.param(this.serializeArray())},serializeArray:function(){return this.map(function(){return this.elements?f.makeArray(this.elements):this}).filter(function(){return this.name&&!this.disabled&&(this.checked||bN.test(this.nodeName)||bH.test(this.type))}).map(function(a,b){var c=f(this).val();return c==null?null:f.isArray(c)?f.map(c,function(a,c){return{name:b.name,value:a.replace(bE,"\r\n")}}):{name:b.name,value:c.replace(bE,"\r\n")}}).get()}}),f.each("ajaxStart ajaxStop ajaxComplete ajaxError ajaxSuccess ajaxSend".split(" "),function(a,b){f.fn[b]=function(a){return this.on(b,a)}}),f.each(["get","post"],function(a,c){f[c]=function(a,d,e,g){f.isFunction(d)&&(g=g||e,e=d,d=b);return f.ajax({type:c,url:a,data:d,success:e,dataType:g})}}),f.extend({getScript:function(a,c){return f.get(a,b,c,"script")},getJSON:function(a,b,c){return f.get(a,b,c,"json")},ajaxSetup:function(a,b){b?b$(a,f.ajaxSettings):(b=a,a=f.ajaxSettings),b$(a,b);return a},ajaxSettings:{url:bU,isLocal:bI.test(bV[1]),global:!0,type:"GET",contentType:"application/x-www-form-urlencoded; charset=UTF-8",processData:!0,async:!0,accepts:{xml:"application/xml, text/xml",html:"text/html",text:"text/plain",json:"application/json, text/javascript","*":bW},contents:{xml:/xml/,html:/html/,json:/json/},responseFields:{xml:"responseXML",text:"responseText"},converters:{"* text":a.String,"text html":!0,"text json":f.parseJSON,"text xml":f.parseXML},flatOptions:{context:!0,url:!0}},ajaxPrefilter:bY(bS),ajaxTransport:bY(bT),ajax:function(a,c){function w(a,c,l,m){if(s!==2){s=2,q&&clearTimeout(q),p=b,n=m||"",v.readyState=a>0?4:0;var o,r,u,w=c,x=l?ca(d,v,l):b,y,z;if(a>=200&&a<300||a===304){if(d.ifModified){if(y=v.getResponseHeader("Last-Modified"))f.lastModified[k]=y;if(z=v.getResponseHeader("Etag"))f.etag[k]=z}if(a===304)w="notmodified",o=!0;else try{r=cb(d,x),w="success",o=!0}catch(A){w="parsererror",u=A}}else{u=w;if(!w||a)w="error",a<0&&(a=0)}v.status=a,v.statusText=""+(c||w),o?h.resolveWith(e,[r,w,v]):h.rejectWith(e,[v,w,u]),v.statusCode(j),j=b,t&&g.trigger("ajax"+(o?"Success":"Error"),[v,d,o?r:u]),i.fireWith(e,[v,w]),t&&(g.trigger("ajaxComplete",[v,d]),--f.active||f.event.trigger("ajaxStop"))}}typeof a=="object"&&(c=a,a=b),c=c||{};var d=f.ajaxSetup({},c),e=d.context||d,g=e!==d&&(e.nodeType||e instanceof f)?f(e):f.event,h=f.Deferred(),i=f.Callbacks("once memory"),j=d.statusCode||{},k,l={},m={},n,o,p,q,r,s=0,t,u,v={readyState:0,setRequestHeader:function(a,b){if(!s){var c=a.toLowerCase();a=m[c]=m[c]||a,l[a]=b}return this},getAllResponseHeaders:function(){return s===2?n:null},getResponseHeader:function(a){var c;if(s===2){if(!o){o={};while(c=bG.exec(n))o[c[1].toLowerCase()]=c[2]}c=o[a.toLowerCase()]}return c===b?null:c},overrideMimeType:function(a){s||(d.mimeType=a);return this},abort:function(a){a=a||"abort",p&&p.abort(a),w(0,a);return this}};h.promise(v),v.success=v.done,v.error=v.fail,v.complete=i.add,v.statusCode=function(a){if(a){var b;if(s<2)for(b in a)j[b]=[j[b],a[b]];else b=a[v.status],v.then(b,b)}return this},d.url=((a||d.url)+"").replace(bF,"").replace(bK,bV[1]+"//"),d.dataTypes=f.trim(d.dataType||"*").toLowerCase().split(bO),d.crossDomain==null&&(r=bQ.exec(d.url.toLowerCase()),d.crossDomain=!(!r||r[1]==bV[1]&&r[2]==bV[2]&&(r[3]||(r[1]==="http:"?80:443))==(bV[3]||(bV[1]==="http:"?80:443)))),d.data&&d.processData&&typeof d.data!="string"&&(d.data=f.param(d.data,d.traditional)),bZ(bS,d,c,v);if(s===2)return!1;t=d.global,d.type=d.type.toUpperCase(),d.hasContent=!bJ.test(d.type),t&&f.active++===0&&f.event.trigger("ajaxStart");if(!d.hasContent){d.data&&(d.url+=(bL.test(d.url)?"&":"?")+d.data,delete d.data),k=d.url;if(d.cache===!1){var x=f.now(),y=d.url.replace(bP,"$1_="+x);d.url=y+(y===d.url?(bL.test(d.url)?"&":"?")+"_="+x:"")}}(d.data&&d.hasContent&&d.contentType!==!1||c.contentType)&&v.setRequestHeader("Content-Type",d.contentType),d.ifModified&&(k=k||d.url,f.lastModified[k]&&v.setRequestHeader("If-Modified-Since",f.lastModified[k]),f.etag[k]&&v.setRequestHeader("If-None-Match",f.etag[k])),v.setRequestHeader("Accept",d.dataTypes[0]&&d.accepts[d.dataTypes[0]]?d.accepts[d.dataTypes[0]]+(d.dataTypes[0]!=="*"?", "+bW+"; q=0.01":""):d.accepts["*"]);for(u in d.headers)v.setRequestHeader(u,d.headers[u]);if(d.beforeSend&&(d.beforeSend.call(e,v,d)===!1||s===2)){v.abort();return!1}for(u in{success:1,error:1,complete:1})v[u](d[u]);p=bZ(bT,d,c,v);if(!p)w(-1,"No Transport");else{v.readyState=1,t&&g.trigger("ajaxSend",[v,d]),d.async&&d.timeout>0&&(q=setTimeout(function(){v.abort("timeout")},d.timeout));try{s=1,p.send(l,w)}catch(z){if(s<2)w(-1,z);else throw z}}return v},param:function(a,c){var d=[],e=function(a,b){b=f.isFunction(b)?b():b,d[d.length]=encodeURIComponent(a)+"="+encodeURIComponent(b)};c===b&&(c=f.ajaxSettings.traditional);if(f.isArray(a)||a.jquery&&!f.isPlainObject(a))f.each(a,function(){e(this.name,this.value)});else for(var g in a)b_(g,a[g],c,e);return d.join("&").replace(bC,"+")}}),f.extend({active:0,lastModified:{},etag:{}});var cc=f.now(),cd=/(\=)\?(&|$)|\?\?/i;f.ajaxSetup({jsonp:"callback",jsonpCallback:function(){return f.expando+"_"+cc++}}),f.ajaxPrefilter("json jsonp",function(b,c,d){var e=typeof b.data=="string"&&/^application\/x\-www\-form\-urlencoded/.test(b.contentType);if(b.dataTypes[0]==="jsonp"||b.jsonp!==!1&&(cd.test(b.url)||e&&cd.test(b.data))){var g,h=b.jsonpCallback=f.isFunction(b.jsonpCallback)?b.jsonpCallback():b.jsonpCallback,i=a[h],j=b.url,k=b.data,l="$1"+h+"$2";b.jsonp!==!1&&(j=j.replace(cd,l),b.url===j&&(e&&(k=k.replace(cd,l)),b.data===k&&(j+=(/\?/.test(j)?"&":"?")+b.jsonp+"="+h))),b.url=j,b.data=k,a[h]=function(a){g=[a]},d.always(function(){a[h]=i,g&&f.isFunction(i)&&a[h](g[0])}),b.converters["script json"]=function(){g||f.error(h+" was not called");return g[0]},b.dataTypes[0]="json";return"script"}}),f.ajaxSetup({accepts:{script:"text/javascript, application/javascript, application/ecmascript, application/x-ecmascript"},contents:{script:/javascript|ecmascript/},converters:{"text script":function(a){f.globalEval(a);return a}}}),f.ajaxPrefilter("script",function(a){a.cache===b&&(a.cache=!1),a.crossDomain&&(a.type="GET",a.global=!1)}),f.ajaxTransport("script",function(a){if(a.crossDomain){var d,e=c.head||c.getElementsByTagName("head")[0]||c.documentElement;return{send:function(f,g){d=c.createElement("script"),d.async="async",a.scriptCharset&&(d.charset=a.scriptCharset),d.src=a.url,d.onload=d.onreadystatechange=function(a,c){if(c||!d.readyState||/loaded|complete/.test(d.readyState))d.onload=d.onreadystatechange=null,e&&d.parentNode&&e.removeChild(d),d=b,c||g(200,"success")},e.insertBefore(d,e.firstChild)},abort:function(){d&&d.onload(0,1)}}}});var ce=a.ActiveXObject?function(){for(var a in cg)cg[a](0,1)}:!1,cf=0,cg;f.ajaxSettings.xhr=a.ActiveXObject?function(){return!this.isLocal&&ch()||ci()}:ch,function(a){f.extend(f.support,{ajax:!!a,cors:!!a&&"withCredentials"in a})}(f.ajaxSettings.xhr()),f.support.ajax&&f.ajaxTransport(function(c){if(!c.crossDomain||f.support.cors){var d;return{send:function(e,g){var h=c.xhr(),i,j;c.username?h.open(c.type,c.url,c.async,c.username,c.password):h.open(c.type,c.url,c.async);if(c.xhrFields)for(j in c.xhrFields)h[j]=c.xhrFields[j];c.mimeType&&h.overrideMimeType&&h.overrideMimeType(c.mimeType),!c.crossDomain&&!e["X-Requested-With"]&&(e["X-Requested-With"]="XMLHttpRequest");try{for(j in e)h.setRequestHeader(j,e[j])}catch(k){}h.send(c.hasContent&&c.data||null),d=function(a,e){var j,k,l,m,n;try{if(d&&(e||h.readyState===4)){d=b,i&&(h.onreadystatechange=f.noop,ce&&delete cg[i]);if(e)h.readyState!==4&&h.abort();else{j=h.status,l=h.getAllResponseHeaders(),m={},n=h.responseXML,n&&n.documentElement&&(m.xml=n);try{m.text=h.responseText}catch(a){}try{k=h.statusText}catch(o){k=""}!j&&c.isLocal&&!c.crossDomain?j=m.text?200:404:j===1223&&(j=204)}}}catch(p){e||g(-1,p)}m&&g(j,k,m,l)},!c.async||h.readyState===4?d():(i=++cf,ce&&(cg||(cg={},f(a).unload(ce)),cg[i]=d),h.onreadystatechange=d)},abort:function(){d&&d(0,1)}}}});var cj={},ck,cl,cm=/^(?:toggle|show|hide)$/,cn=/^([+\-]=)?([\d+.\-]+)([a-z%]*)$/i,co,cp=[["height","marginTop","marginBottom","paddingTop","paddingBottom"],["width","marginLeft","marginRight","paddingLeft","paddingRight"],["opacity"]],cq;f.fn.extend({show:function(a,b,c){var d,e;if(a||a===0)return this.animate(ct("show",3),a,b,c);for(var g=0,h=this.length;g<h;g++)d=this[g],d.style&&(e=d.style.display,!f._data(d,"olddisplay")&&e==="none"&&(e=d.style.display=""),(e===""&&f.css(d,"display")==="none"||!f.contains(d.ownerDocument.documentElement,d))&&f._data(d,"olddisplay",cu(d.nodeName)));for(g=0;g<h;g++){d=this[g];if(d.style){e=d.style.display;if(e===""||e==="none")d.style.display=f._data(d,"olddisplay")||""}}return this},hide:function(a,b,c){if(a||a===0)return this.animate(ct("hide",3),a,b,c);var d,e,g=0,h=this.length;for(;g<h;g++)d=this[g],d.style&&(e=f.css(d,"display"),e!=="none"&&!f._data(d,"olddisplay")&&f._data(d,"olddisplay",e));for(g=0;g<h;g++)this[g].style&&(this[g].style.display="none");return this},_toggle:f.fn.toggle,toggle:function(a,b,c){var d=typeof a=="boolean";f.isFunction(a)&&f.isFunction(b)?this._toggle.apply(this,arguments):a==null||d?this.each(function(){var b=d?a:f(this).is(":hidden");f(this)[b?"show":"hide"]()}):this.animate(ct("toggle",3),a,b,c);return this},fadeTo:function(a,b,c,d){return this.filter(":hidden").css("opacity",0).show().end().animate({opacity:b},a,c,d)},animate:function(a,b,c,d){function g(){e.queue===!1&&f._mark(this);var b=f.extend({},e),c=this.nodeType===1,d=c&&f(this).is(":hidden"),g,h,i,j,k,l,m,n,o,p,q;b.animatedProperties={};for(i in a){g=f.camelCase(i),i!==g&&(a[g]=a[i],delete a[i]);if((k=f.cssHooks[g])&&"expand"in k){l=k.expand(a[g]),delete a[g];for(i in l)i in a||(a[i]=l[i])}}for(g in a){h=a[g],f.isArray(h)?(b.animatedProperties[g]=h[1],h=a[g]=h[0]):b.animatedProperties[g]=b.specialEasing&&b.specialEasing[g]||b.easing||"swing";if(h==="hide"&&d||h==="show"&&!d)return b.complete.call(this);c&&(g==="height"||g==="width")&&(b.overflow=[this.style.overflow,this.style.overflowX,this.style.overflowY],f.css(this,"display")==="inline"&&f.css(this,"float")==="none"&&(!f.support.inlineBlockNeedsLayout||cu(this.nodeName)==="inline"?this.style.display="inline-block":this.style.zoom=1))}b.overflow!=null&&(this.style.overflow="hidden");for(i in a)j=new f.fx(this,b,i),h=a[i],cm.test(h)?(q=f._data(this,"toggle"+i)||(h==="toggle"?d?"show":"hide":0),q?(f._data(this,"toggle"+i,q==="show"?"hide":"show"),j[q]()):j[h]()):(m=cn.exec(h),n=j.cur(),m?(o=parseFloat(m[2]),p=m[3]||(f.cssNumber[i]?"":"px"),p!=="px"&&(f.style(this,i,(o||1)+p),n=(o||1)/j.cur()*n,f.style(this,i,n+p)),m[1]&&(o=(m[1]==="-="?-1:1)*o+n),j.custom(n,o,p)):j.custom(n,h,""));return!0}var e=f.speed(b,c,d);if(f.isEmptyObject(a))return this.each(e.complete,[!1]);a=f.extend({},a);return e.queue===!1?this.each(g):this.queue(e.queue,g)},stop:function(a,c,d){typeof a!="string"&&(d=c,c=a,a=b),c&&a!==!1&&this.queue(a||"fx",[]);return this.each(function(){function h(a,b,c){var e=b[c];f.removeData(a,c,!0),e.stop(d)}var b,c=!1,e=f.timers,g=f._data(this);d||f._unmark(!0,this);if(a==null)for(b in g)g[b]&&g[b].stop&&b.indexOf(".run")===b.length-4&&h(this,g,b);else g[b=a+".run"]&&g[b].stop&&h(this,g,b);for(b=e.length;b--;)e[b].elem===this&&(a==null||e[b].queue===a)&&(d?e[b](!0):e[b].saveState(),c=!0,e.splice(b,1));(!d||!c)&&f.dequeue(this,a)})}}),f.each({slideDown:ct("show",1),slideUp:ct("hide",1),slideToggle:ct("toggle",1),fadeIn:{opacity:"show"},fadeOut:{opacity:"hide"},fadeToggle:{opacity:"toggle"}},function(a,b){f.fn[a]=function(a,c,d){return this.animate(b,a,c,d)}}),f.extend({speed:function(a,b,c){var d=a&&typeof a=="object"?f.extend({},a):{complete:c||!c&&b||f.isFunction(a)&&a,duration:a,easing:c&&b||b&&!f.isFunction(b)&&b};d.duration=f.fx.off?0:typeof d.duration=="number"?d.duration:d.duration in f.fx.speeds?f.fx.speeds[d.duration]:f.fx.speeds._default;if(d.queue==null||d.queue===!0)d.queue="fx";d.old=d.complete,d.complete=function(a){f.isFunction(d.old)&&d.old.call(this),d.queue?f.dequeue(this,d.queue):a!==!1&&f._unmark(this)};return d},easing:{linear:function(a){return a},swing:function(a){return-Math.cos(a*Math.PI)/2+.5}},timers:[],fx:function(a,b,c){this.options=b,this.elem=a,this.prop=c,b.orig=b.orig||{}}}),f.fx.prototype={update:function(){this.options.step&&this.options.step.call(this.elem,this.now,this),(f.fx.step[this.prop]||f.fx.step._default)(this)},cur:function(){if(this.elem[this.prop]!=null&&(!this.elem.style||this.elem.style[this.prop]==null))return this.elem[this.prop];var a,b=f.css(this.elem,this.prop);return isNaN(a=parseFloat(b))?!b||b==="auto"?0:b:a},custom:function(a,c,d){function h(a){return e.step(a)}var e=this,g=f.fx;this.startTime=cq||cr(),this.end=c,this.now=this.start=a,this.pos=this.state=0,this.unit=d||this.unit||(f.cssNumber[this.prop]?"":"px"),h.queue=this.options.queue,h.elem=this.elem,h.saveState=function(){f._data(e.elem,"fxshow"+e.prop)===b&&(e.options.hide?f._data(e.elem,"fxshow"+e.prop,e.start):e.options.show&&f._data(e.elem,"fxshow"+e.prop,e.end))},h()&&f.timers.push(h)&&!co&&(co=setInterval(g.tick,g.interval))},show:function(){var a=f._data(this.elem,"fxshow"+this.prop);this.options.orig[this.prop]=a||f.style(this.elem,this.prop),this.options.show=!0,a!==b?this.custom(this.cur(),a):this.custom(this.prop==="width"||this.prop==="height"?1:0,this.cur()),f(this.elem).show()},hide:function(){this.options.orig[this.prop]=f._data(this.elem,"fxshow"+this.prop)||f.style(this.elem,this.prop),this.options.hide=!0,this.custom(this.cur(),0)},step:function(a){var b,c,d,e=cq||cr(),g=!0,h=this.elem,i=this.options;if(a||e>=i.duration+this.startTime){this.now=this.end,this.pos=this.state=1,this.update(),i.animatedProperties[this.prop]=!0;for(b in i.animatedProperties)i.animatedProperties[b]!==!0&&(g=!1);if(g){i.overflow!=null&&!f.support.shrinkWrapBlocks&&f.each(["","X","Y"],function(a,b){h.style["overflow"+b]=i.overflow[a]}),i.hide&&f(h).hide();if(i.hide||i.show)for(b in i.animatedProperties)f.style(h,b,i.orig[b]),f.removeData(h,"fxshow"+b,!0),f.removeData(h,"toggle"+b,!0);d=i.complete,d&&(i.complete=!1,d.call(h))}return!1}i.duration==Infinity?this.now=e:(c=e-this.startTime,this.state=c/i.duration,this.pos=f.easing[i.animatedProperties[this.prop]](this.state,c,0,1,i.duration),this.now=this.start+(this.end-this.start)*this.pos),this.update();return!0}},f.extend(f.fx,{tick:function(){var a,b=f.timers,c=0;for(;c<b.length;c++)a=b[c],!a()&&b[c]===a&&b.splice(c--,1);b.length||f.fx.stop()},interval:13,stop:function(){clearInterval(co),co=null},speeds:{slow:600,fast:200,_default:400},step:{opacity:function(a){f.style(a.elem,"opacity",a.now)},_default:function(a){a.elem.style&&a.elem.style[a.prop]!=null?a.elem.style[a.prop]=a.now+a.unit:a.elem[a.prop]=a.now}}}),f.each(cp.concat.apply([],cp),function(a,b){b.indexOf("margin")&&(f.fx.step[b]=function(a){f.style(a.elem,b,Math.max(0,a.now)+a.unit)})}),f.expr&&f.expr.filters&&(f.expr.filters.animated=function(a){return f.grep(f.timers,function(b){return a===b.elem}).length});var cv,cw=/^t(?:able|d|h)$/i,cx=/^(?:body|html)$/i;"getBoundingClientRect"in c.documentElement?cv=function(a,b,c,d){try{d=a.getBoundingClientRect()}catch(e){}if(!d||!f.contains(c,a))return d?{top:d.top,left:d.left}:{top:0,left:0};var g=b.body,h=cy(b),i=c.clientTop||g.clientTop||0,j=c.clientLeft||g.clientLeft||0,k=h.pageYOffset||f.support.boxModel&&c.scrollTop||g.scrollTop,l=h.pageXOffset||f.support.boxModel&&c.scrollLeft||g.scrollLeft,m=d.top+k-i,n=d.left+l-j;return{top:m,left:n}}:cv=function(a,b,c){var d,e=a.offsetParent,g=a,h=b.body,i=b.defaultView,j=i?i.getComputedStyle(a,null):a.currentStyle,k=a.offsetTop,l=a.offsetLeft;while((a=a.parentNode)&&a!==h&&a!==c){if(f.support.fixedPosition&&j.position==="fixed")break;d=i?i.getComputedStyle(a,null):a.currentStyle,k-=a.scrollTop,l-=a.scrollLeft,a===e&&(k+=a.offsetTop,l+=a.offsetLeft,f.support.doesNotAddBorder&&(!f.support.doesAddBorderForTableAndCells||!cw.test(a.nodeName))&&(k+=parseFloat(d.borderTopWidth)||0,l+=parseFloat(d.borderLeftWidth)||0),g=e,e=a.offsetParent),f.support.subtractsBorderForOverflowNotVisible&&d.overflow!=="visible"&&(k+=parseFloat(d.borderTopWidth)||0,l+=parseFloat(d.borderLeftWidth)||0),j=d}if(j.position==="relative"||j.position==="static")k+=h.offsetTop,l+=h.offsetLeft;f.support.fixedPosition&&j.position==="fixed"&&(k+=Math.max(c.scrollTop,h.scrollTop),l+=Math.max(c.scrollLeft,h.scrollLeft));return{top:k,left:l}},f.fn.offset=function(a){if(arguments.length)return a===b?this:this.each(function(b){f.offset.setOffset(this,a,b)});var c=this[0],d=c&&c.ownerDocument;if(!d)return null;if(c===d.body)return f.offset.bodyOffset(c);return cv(c,d,d.documentElement)},f.offset={bodyOffset:function(a){var b=a.offsetTop,c=a.offsetLeft;f.support.doesNotIncludeMarginInBodyOffset&&(b+=parseFloat(f.css(a,"marginTop"))||0,c+=parseFloat(f.css(a,"marginLeft"))||0);return{top:b,left:c}},setOffset:function(a,b,c){var d=f.css(a,"position");d==="static"&&(a.style.position="relative");var e=f(a),g=e.offset(),h=f.css(a,"top"),i=f.css(a,"left"),j=(d==="absolute"||d==="fixed")&&f.inArray("auto",[h,i])>-1,k={},l={},m,n;j?(l=e.position(),m=l.top,n=l.left):(m=parseFloat(h)||0,n=parseFloat(i)||0),f.isFunction(b)&&(b=b.call(a,c,g)),b.top!=null&&(k.top=b.top-g.top+m),b.left!=null&&(k.left=b.left-g.left+n),"using"in b?b.using.call(a,k):e.css(k)}},f.fn.extend({position:function(){if(!this[0])return null;var a=this[0],b=this.offsetParent(),c=this.offset(),d=cx.test(b[0].nodeName)?{top:0,left:0}:b.offset();c.top-=parseFloat(f.css(a,"marginTop"))||0,c.left-=parseFloat(f.css(a,"marginLeft"))||0,d.top+=parseFloat(f.css(b[0],"borderTopWidth"))||0,d.left+=parseFloat(f.css(b[0],"borderLeftWidth"))||0;return{top:c.top-d.top,left:c.left-d.left}},offsetParent:function(){return this.map(function(){var a=this.offsetParent||c.body;while(a&&!cx.test(a.nodeName)&&f.css(a,"position")==="static")a=a.offsetParent;return a})}}),f.each({scrollLeft:"pageXOffset",scrollTop:"pageYOffset"},function(a,c){var d=/Y/.test(c);f.fn[a]=function(e){return f.access(this,function(a,e,g){var h=cy(a);if(g===b)return h?c in h?h[c]:f.support.boxModel&&h.document.documentElement[e]||h.document.body[e]:a[e];h?h.scrollTo(d?f(h).scrollLeft():g,d?g:f(h).scrollTop()):a[e]=g},a,e,arguments.length,null)}}),f.each({Height:"height",Width:"width"},function(a,c){var d="client"+a,e="scroll"+a,g="offset"+a;f.fn["inner"+a]=function(){var a=this[0];return a?a.style?parseFloat(f.css(a,c,"padding")):this[c]():null},f.fn["outer"+a]=function(a){var b=this[0];return b?b.style?parseFloat(f.css(b,c,a?"margin":"border")):this[c]():null},f.fn[c]=function(a){return f.access(this,function(a,c,h){var i,j,k,l;if(f.isWindow(a)){i=a.document,j=i.documentElement[d];return f.support.boxModel&&j||i.body&&i.body[d]||j}if(a.nodeType===9){i=a.documentElement;if(i[d]>=i[e])return i[d];return Math.max(a.body[e],i[e],a.body[g],i[g])}if(h===b){k=f.css(a,c),l=parseFloat(k);return f.isNumeric(l)?l:k}f(a).css(c,h)},c,a,arguments.length,null)}}),a.jQuery=a.$=f,typeof define=="function"&&define.amd&&define.amd.jQuery&&define("jquery",[],function(){return f})})(window);
                 </script><?php
 
-                if ( $javascript ) {
+                if ($javascript) {
                     $javascript();
                 }
             }
@@ -3955,9 +4008,9 @@
          */
         class ErrorException extends Exception
         {
-            public function __construct( $message, $code, $severity, $file, $line )
+            public function __construct($message, $code, $severity, $file, $line)
             {
-                parent::__construct( $message, $code, null );
+                parent::__construct($message, $code, null);
 
                 $this->file = $file;
                 $this->line = $line;
@@ -3975,26 +4028,31 @@
             private $isShown;
             private $line;
 
-            public function __construct( $line, $id, array $lines, $isShown ) {
+            public function __construct($line, $id, array $lines, $isShown)
+            {
                 $this->id = $id;
                 $this->lines = $lines;
                 $this->isShown = $isShown;
                 $this->line = $line;
             }
 
-            public function getHTMLID() {
+            public function getHTMLID()
+            {
                 return $this->id;
             }
 
-            public function getLines() {
+            public function getLines()
+            {
                 return $this->lines;
             }
 
-            public function isShown() {
+            public function isShown()
+            {
                 return $this->isShown;
             }
 
-            public function getLine() {
+            public function getLine()
+            {
                 return $this->line;
             }
         }
@@ -4071,7 +4129,8 @@
              * @param string $js Javascript to be minified
              * @return string
              */
-            public static function minify($js) {
+            public static function minify($js)
+            {
                 $jsmin = new JSMin($js);
                 return $jsmin->min();
             }
@@ -4083,7 +4142,8 @@
              *
              * @param string $input Javascript to be minified
              */
-            public function __construct($input) {
+            public function __construct($input)
+            {
                 $this->input = str_replace("\r\n", "\n", $input);
                 $this->inputLength = strlen($this->input);
             }
@@ -4107,8 +4167,9 @@
              * ACTION_DELETE_A Copy B to A. Get the next B. (Delete A).
              * ACTION_DELETE_A_B Get the next B. (Delete B).
              */
-            protected function action($command) {
-                switch($command) {
+            protected function action($command)
+            {
+                switch ($command) {
                     case self::ACTION_KEEP_A:
                         $this->output .= $this->a;
 
@@ -4143,8 +4204,7 @@
                                 $this->a === ':' || $this->a === '[' || $this->a === '!' ||
                                 $this->a === '&' || $this->a === '|' || $this->a === '?' ||
                                 $this->a === '{' || $this->a === '}' || $this->a === ';' ||
-                                $this->a === "\n" )) {
-
+                                $this->a === "\n")) {
                             $this->output .= $this->a . $this->b;
 
                             for (;;) {
@@ -4160,7 +4220,7 @@
                                         $this->a = $this->get();
 
                                         if ($this->a === ']') {
-                                                break;
+                                            break;
                                         } elseif ($this->a === '\\') {
                                             $this->output .= $this->a;
                                             $this->a = $this->get();
@@ -4190,7 +4250,8 @@
              *
              * @return string|null
              */
-            protected function get() {
+            protected function get()
+            {
                 $c = $this->lookAhead;
                 $this->lookAhead = null;
 
@@ -4219,7 +4280,8 @@
              *
              * @return bool
              */
-            protected function isAlphaNum($c) {
+            protected function isAlphaNum($c)
+            {
                 return ord($c) > 126 || $c === '\\' || preg_match('/^[\w\$]$/', $c) === 1;
             }
 
@@ -4232,11 +4294,12 @@
              * @uses peek()
              * @return string
              */
-            protected function min() {
+            protected function min()
+            {
                 if (0 == strncmp($this->peek(), "\xef", 1)) {
-                        $this->get();
-                        $this->get();
-                        $this->get();
+                    $this->get();
+                    $this->get();
+                    $this->get();
                 }
 
                 $this->a = "\n";
@@ -4271,8 +4334,7 @@
                                 default:
                                     if ($this->isAlphaNum($this->b)) {
                                         $this->action(self::ACTION_KEEP_A);
-                                    }
-                                    else {
+                                    } else {
                                         $this->action(self::ACTION_DELETE_A);
                                     }
                             }
@@ -4304,8 +4366,7 @@
                                         default:
                                             if ($this->isAlphaNum($this->a)) {
                                                 $this->action(self::ACTION_KEEP_A);
-                                            }
-                                            else {
+                                            } else {
                                                 $this->action(self::ACTION_DELETE_A_B);
                                             }
                                     }
@@ -4330,11 +4391,12 @@
              * @throws JSMinException On unterminated comment.
              * @return string
              */
-            protected function next() {
+            protected function next()
+            {
                 $c = $this->get();
 
                 if ($c === '/') {
-                    switch($this->peek()) {
+                    switch ($this->peek()) {
                         case '/':
                             for (;;) {
                                 $c = $this->get();
@@ -4348,7 +4410,7 @@
                             $this->get();
 
                             for (;;) {
-                                switch($this->get()) {
+                                switch ($this->get()) {
                                     case '*':
                                         if ($this->peek() === '/') {
                                             $this->get();
@@ -4375,14 +4437,17 @@
              * @uses get()
              * @return string|null
              */
-            protected function peek() {
+            protected function peek()
+            {
                 $this->lookAhead = $this->get();
                 return $this->lookAhead;
             }
         }
 
         // -- Exceptions ---------------------------------------------------------------
-        class JSMinException extends Exception {}
+        class JSMinException extends Exception
+        {
+        }
 
         if (
                 $_php_error_is_ini_enabled &&

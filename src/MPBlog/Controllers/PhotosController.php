@@ -2,10 +2,12 @@
 
 namespace MPBlog\Controllers;
 
-class PhotosController extends \MP\Framework\Controller {
-
-	public function index()
-	{
-	}
-
+/**
+ * TODO
+ */
+class PhotosController extends \MP\Framework\Controller
+{
+    public function index()
+    {
+    }
 }
